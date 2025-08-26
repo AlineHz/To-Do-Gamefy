@@ -1,9 +1,4 @@
-/* script.js — versão com sistema de levels baseado nos pontos totais (modificado: assets padronizados)
-   Alteração: a função attemptHatchEgg agora gera **apenas** um caminho de asset no formato
-   Title Case com espaços + ".png" (ex.: "Gato Angora.png", "Gato Laranja.png", "Bulldog.png").
-   Removidos os outros formatos/variações que antes eram tentados.
-*/
-
+/* script.js — versão com sistema de levels baseado nos pontos totais */
 document.addEventListener('DOMContentLoaded', function () {
   // elements (nav + app)
   const pagesListEl = document.getElementById('pages-list');
@@ -61,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const BONUS_PER_LIST = 50;
 
   // level/xp config
-  const XP_BASE = 100; // base incremental XP (see formula below)
+  const XP_BASE = 100; // base incremental XP (see formula abaixo)
 
   // audio helpers (unchanged)
   let _audioCtx = null;
@@ -322,7 +317,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // helpers UI
-  function escapeHtml(s) { return String(s).replace(/[&<>\"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','\\"':'&quot;',"'":"&#39;"}[ch];}); }
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];}); }
 
   // progress / render for current page
   function computeListProgress(list) {
@@ -736,5 +731,413 @@ function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; sav
   function addTask(listId, text) {
     var pg = getCurrentPage();
     text = (text || '').trim(); if (!text) return;
-    var list = pg.lists.find(function(l)
+    var list = pg.lists.find(function(l){ return l.id === listId; });
+    if (!list) return;
+    list.tasks.push({ id: uid(), text: text, done: false });
+    save(); renderLists(); renderTasks();
+  }
 
+  
+
+function setCompletedAndSchedule(list) {
+    // mark completed now (historical marker)
+    list.completed = true;
+    list.completedAt = (new Date()).toISOString();
+    // award bonus if not already awarded
+    if (!list.bonusAwarded) {
+      list.pointsAwarded = (Number(list.pointsAwarded) || 0) + BONUS_PER_LIST;
+      list.bonusAwarded = true;
+    }
+    // compute next occurrence for repeating lists and schedule it
+    if (list.repeat && list.repeat !== 'once') {
+      var next = computeNextOccurrence(list);
+      if (next) {
+        // set availableOn to next occurrence (ISO)
+        list.availableOn = startOfDay(next).toISOString();
+        // prepare tasks for the next occurrence: mark them as not done so they show up as planned
+        if (Array.isArray(list.tasks)) {
+          list.tasks.forEach(function(t){ t.done = false; });
+        }
+        // add a single history record task that remains marked as done so it shows in completed tasks
+        try {
+          var histText = 'Concluído em ' + (new Date()).toLocaleDateString('pt-BR');
+          var histId = 'hist_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+          // keep history tasks at the end of tasks array
+          list.tasks.push({ id: histId, text: histText, done: true, _isHistory: true });
+        } catch(e){}
+        // keep list.completed = true so it continues to appear under Concluídas as a record
+        // and allow it to also be shown under Planejados because availableOn is in the future
+        // reset bonusAwarded so user can receive bonus again next time
+        list.bonusAwarded = false;
+      }
+    }
+    save(); renderLists(); renderTasks();
+  }
+
+
+
+  function toggleTask(listId, taskId) {
+    var pg = getCurrentPage();
+    var list = pg.lists.find(function(l){ return l.id === listId; });
+    if (!list) return;
+    var task = (list.tasks || []).find(function(t){ return t.id === taskId; });
+    if (!task) return;
+    var prev = !!task.done;
+    task.done = !task.done;
+    if (!prev && task.done) {
+      list.pointsAwarded = (Number(list.pointsAwarded) || 0) + POINTS_PER_TASK;
+      animatePoints(POINTS_PER_TASK);
+      try { playShortChime(); } catch(e){}
+    } else if (prev && !task.done) {
+      list.pointsAwarded = Math.max(0, (Number(list.pointsAwarded) || 0) - POINTS_PER_TASK);
+      animatePoints(-POINTS_PER_TASK);
+    }
+    var allDone = (list.tasks || []).length > 0 && (list.tasks || []).every(function(t){ return t.done; });
+    if (allDone && !list.completed) {
+      setCompletedAndSchedule(list);
+      try { playShortChime(); } catch(e){}
+    } else if (!allDone && list.completed) {
+      if (list.bonusAwarded) {
+        list.pointsAwarded = Math.max(0, (Number(list.pointsAwarded) || 0) - BONUS_PER_LIST);
+        animatePoints(-BONUS_PER_LIST);
+        list.bonusAwarded = false;
+      }
+      list.completed = false;
+      list.completedAt = null;
+    }
+    save(); renderLists(); renderTasks();
+  }
+
+  function removeTask(listId, taskId) {
+    var pg = getCurrentPage();
+    var list = pg.lists.find(function(l){ return l.id === listId; });
+    if (!list) return;
+    var removed = (list.tasks || []).find(function(t){ return t.id === taskId; });
+    if (removed && removed.done) {
+      list.pointsAwarded = Math.max(0, (Number(list.pointsAwarded) || 0) - POINTS_PER_TASK);
+      animatePoints(-POINTS_PER_TASK);
+    }
+    list.tasks = (list.tasks || []).filter(function(t){ return t.id !== taskId; });
+    if ((list.tasks || []).length === 0) { list.completed = false; list.bonusAwarded = false; list.completedAt = null; }
+    save(); renderLists(); renderTasks();
+  }
+
+  function confirmCompletion(listId) {
+    var pg = getCurrentPage();
+    var list = pg.lists.find(function(l){ return l.id === listId; });
+    if (!list) return;
+    if (!list.tasks || !list.tasks.length) return;
+    if (!(list.tasks.every(function(t){ return t.done; }))) return;
+    setCompletedAndSchedule(list);
+    try { playShortChime(); } catch(e){}
+    save(); renderLists(); renderTasks();
+  }
+
+  // view mode per page
+  function setViewMode(mode) {
+    var pg = getCurrentPage();
+    pg.viewMode = mode || 'active';
+    if (tabActive) tabActive.classList.toggle('active', pg.viewMode === 'active');
+    if (tabPlanned) tabPlanned.classList.toggle('active', pg.viewMode === 'planned');
+    if (tabCompleted) tabCompleted.classList.toggle('active', pg.viewMode === 'completed');
+    save(); renderLists(); renderTasks();
+  }
+
+  // --- EDIT INLINE ON THE ACTIVE TAB (keeps previous behavior: inline input) ---
+  function startEditActiveTab() {
+    if (!pagesListEl) return;
+    var activeTab = pagesListEl.querySelector('.tab.active');
+    if (!activeTab) return;
+    var pageId = activeTab.getAttribute('data-page-id');
+    var page = state.pages.find(function(p){ return p.id === pageId; });
+    if (!page) return;
+
+    if (activeTab.classList.contains('editing')) return;
+
+    var originalTitle = page.title || '';
+    activeTab.classList.add('editing');
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'page-tab-input';
+    input.value = originalTitle;
+    input.setAttribute('aria-label','Editar título da página');
+
+    activeTab.innerHTML = '';
+    activeTab.appendChild(input);
+    input.focus();
+    input.setSelectionRange(0, input.value.length);
+
+    function commit() {
+      var newVal = input.value.trim();
+      if (!newVal) { alert('O título não pode ficar vazio.'); input.focus(); return; }
+      page.title = newVal;
+      save();
+      renderPagesNav();
+      setCurrentPage(page.id);
+    }
+    function cancel() {
+      renderPagesNav();
+      setCurrentPage(page.id);
+    }
+
+    input.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') { e.preventDefault(); commit(); }
+      else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+    });
+    input.addEventListener('blur', function(){ commit(); });
+  }
+
+  // wire the edit button to start inline edit
+  if (btnEditPage) btnEditPage.addEventListener('click', function () {
+    startEditActiveTab();
+  });
+
+  // add page via nav
+  if (btnAddPageNav) {
+    btnAddPageNav.addEventListener('click', function () {
+      var title = newPageTitleInput ? newPageTitleInput.value.trim() : '';
+      if (!title) { alert('Insira um título para a nova página.'); return; }
+      addPage(title);
+      if (newPageTitleInput) newPageTitleInput.value = '';
+    });
+    if (newPageTitleInput) {
+      newPageTitleInput.addEventListener('keydown', function(e){ if (e.key === 'Enter') btnAddPageNav.click(); });
+    }
+  }
+
+  // excluir página atual
+  if (btnDeletePageNav) {
+    btnDeletePageNav.addEventListener('click', function () {
+      removeCurrentPage();
+    });
+  }
+
+  // add list / tasks events (unchanged)
+  if (btnAddList) btnAddList.addEventListener('click', function () {
+    var repeatVal = (document.querySelector('input[name="repeat"]:checked') || { value: 'once' }).value;
+    var dateVal = newListDate ? newListDate.value : '';
+    var avail = parseInputDate(dateVal) || null;
+    var repeatDays = Array.from(document.querySelectorAll('#form-add-list input[name="list-repeat-days"]:checked')).map(function(cb){return parseInt(cb.value,10);});
+    var monthlyDay = null;
+    if (monthlyInput && monthlyInput.value) {
+      var md = parseInt(monthlyInput.value,10);
+      if (!isNaN(md) && md >=1 && md <=31) monthlyDay = md;
+    }
+    addList(newListTitle.value, repeatVal, avail, repeatDays, monthlyDay);
+    newListTitle.value=''; if (newListDate) newListDate.value=''; if (monthlyInput) monthlyInput.value='';
+  });
+
+  if (btnAddTask) btnAddTask.addEventListener('click', function(){ var pg = getCurrentPage(); if (pg.selectedListId) addTask(pg.selectedListId, newTaskText.value); newTaskText.value=''; });
+  if (btnConfirm) btnConfirm.addEventListener('click', function(){ var pg = getCurrentPage(); if (pg.selectedListId) confirmCompletion(pg.selectedListId); });
+  if (btnDeleteList) btnDeleteList.addEventListener('click', function(){ var pg = getCurrentPage(); var idx = pg.lists.findIndex(function(l){return l.id === pg.selectedListId}); if (idx>-1 && confirm('Deseja realmente excluir esta lista?')) { pg.lists.splice(idx,1); save(); renderLists(); renderTasks(); } });
+
+  if (tabActive) tabActive.addEventListener('click', function(){ setViewMode('active'); });
+  if (tabPlanned) tabPlanned.addEventListener('click', function(){ setViewMode('planned'); });
+  if (tabCompleted) tabCompleted.addEventListener('click', function(){ setViewMode('completed'); });
+
+  if (newListTitle) newListTitle.addEventListener('keydown', function(e){ if (e.key === 'Enter') btnAddList.click(); });
+  if (newTaskText) newTaskText.addEventListener('keydown', function(e){ if (e.key === 'Enter') btnAddTask.click(); });
+
+  // persistence init
+  load();
+  renderPagesNav();
+  if (!state.pages.find(function(p){ return p.id === state.currentPageId; })) state.currentPageId = state.pages[0].id;
+  save();
+  renderPagesNav();
+  renderLists();
+  renderTasks();
+  updatePointsDisplay();
+  lastOverallPercent = computeOverallProgressCurrentPage();
+
+
+// repeat controls init (robust)
+(function setupRepeatControls(){
+  var form = document.getElementById('form-add-list');
+  var weeklyControls = document.getElementById('weekly-controls');
+  var monthlyControls = document.getElementById('monthly-controls');
+  var listRepeatControlsEl = document.getElementById('list-repeat-controls');
+
+  function updateRepeatControlsDisplay(){
+    var weeklyChecked = (document.getElementById('repeat-weekly') && document.getElementById('repeat-weekly').checked);
+    var monthlyChecked = (document.getElementById('repeat-monthly') && document.getElementById('repeat-monthly').checked);
+    if (!listRepeatControlsEl) return;
+    if (weeklyChecked) {
+      if (weeklyControls) weeklyControls.style.display = 'flex';
+      if (monthlyControls) monthlyControls.style.display = 'none';
+      listRepeatControlsEl.style.display = 'block';
+    } else if (monthlyChecked) {
+      if (weeklyControls) weeklyControls.style.display = 'none';
+      if (monthlyControls) monthlyControls.style.display = 'flex';
+      listRepeatControlsEl.style.display = 'block';
+    } else {
+      if (weeklyControls) weeklyControls.style.display = 'none';
+      if (monthlyControls) monthlyControls.style.display = 'none';
+      listRepeatControlsEl.style.display = 'none';
+    }
+  }
+
+  // Listen centrally on the form for changes to inputs named 'repeat'
+  if (form) {
+    form.addEventListener('change', function(e){
+      var target = e.target;
+      if (!target) return;
+      if (target.name === 'repeat' || target.id === 'repeat-weekly' || target.id === 'repeat-monthly' || target.id === 'repeat-daily') {
+        // small timeout to ensure radio state updated in some browsers
+        setTimeout(updateRepeatControlsDisplay, 0);
+      }
+    }, false);
+  }
+
+  // initialize display on load
+  try { updateRepeatControlsDisplay(); } catch(e) {}
+})();
+;
+
+  // expose some functions for debugging in console (if needed)
+  window.__mini_todo_state = state;
+  window.__mini_todo_save = save;
+  window.__mini_todo_computeLevel = computeLevelFromPoints;
+});
+
+
+
+
+// ---------------------------------------------------
+// attemptHatchEgg: converte ovo_... => item '...' e atualiza preview
+// ---------------------------------------------------
+function attemptHatchEgg(){
+  try {
+    var egg = window.incubatorSelectedEgg;
+    if (!egg || String(egg.code || '').indexOf('ovo_') !== 0) return;
+
+    var LS = 'mini_todo_inventory_v1';
+    var inv = [];
+    try { inv = JSON.parse(localStorage.getItem(LS) || '[]') || []; } catch(e){ inv = []; }
+
+    // tentar remover o ovo correspondente: primeiro por UID, senão por código (remover só 1)
+    var removed = false;
+    for (var i = 0; i < inv.length; i++) {
+      var it = inv[i];
+      if (!it) continue;
+      if ((egg.uid && it.uid === egg.uid) || (it.code === egg.code && !removed)) {
+        inv.splice(i, 1);
+        removed = true;
+        break;
+      }
+    }
+    if (!removed) {
+      // nada para chocar (provavelmente já usado) — aborta silenciosamente
+      return;
+    }
+
+    // monta o novo item (retira 'ovo_' do código)
+    var base = egg.code.replace(/^ovo_/, '');
+    // tenta usar o emoji do ovo sem o '🥚' (se houver)
+    var rawEmoji = String(egg.emoji || '').replace(/🥚/g, '').trim();
+    var petEmoji = rawEmoji || '🐾';
+    var petName = String(base).replace(/_/g, ' ');
+    petName = petName.charAt(0).toUpperCase() + petName.slice(1);
+
+    var petItem = {
+      uid: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8),
+      code: base,
+      name: petName,
+      emoji: petEmoji,
+      desc: 'Nascido de um ovo',
+      awardedAt: new Date().toISOString(),
+      level: 0
+    };
+
+    // adiciona o pet no inventário
+    inv.push(petItem);
+    localStorage.setItem(LS, JSON.stringify(inv));
+
+    // notifica mudanças (para atualizar UI de inventário / slot)
+    try {
+      document.dispatchEvent(new CustomEvent('mini_todo_inventory_changed', { detail: { code: egg.code, delta: -1 } }));
+      document.dispatchEvent(new CustomEvent('mini_todo_inventory_changed', { detail: { code: petItem.code, delta: +1 } }));
+    } catch(e){}
+
+    // atualiza preview na página (se existir) — tenta usar imagem em Assets e faz fallback para SVG
+    try {
+      var img = document.getElementById('incubator-page-preview') || document.getElementById('incubator-preview') || document.querySelector('.incubator-preview img');
+      if (img) {
+        // cria possíveis caminhos de arquivo a partir do código base (ex: 'gato_angora' -> 'Gato angora.png', 'Gato_angora.png', 'gato_angora.png', 'gatoangora.png')
+        var baseForFile = String(base || '').replace(/_/g, ' ').trim();
+        function titleCase(s){ return s.split(/\s+/).map(function(w){ return w.charAt(0).toUpperCase()+w.slice(1); }).join(' '); }
+        var candidates = [];
+        if (baseForFile) {
+          candidates.push('/assets/' + titleCase(baseForFile) + '.png');       // "Gato Angora.png" or "Bulldog.png"
+          candidates.push('/assets/' + baseForFile + '.png');                 // "gato angora.png"
+          candidates.push('/assets/' + baseForFile.replace(/\s+/g,'_') + '.png'); // "gato_angora.png"
+          candidates.push('/assets/' + baseForFile.replace(/\s+/g,'') + '.png');  // "gatoangora.png"
+        }
+        // always keep a final fallback to an inline SVG (emoji)
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">' +
+                  '<rect width="100%" height="100%" fill="#fff" rx="16" />' +
+                  '<text x="50%" y="50%" font-size="160" text-anchor="middle" dominant-baseline="middle">' + petEmoji + '</text>' +
+                  '<text x="50%" y="88%" font-size="28" text-anchor="middle" fill="#333">' + petName + '</text>' +
+                  '</svg>';
+        var svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+
+        // helper to try candidates sequentially; set onerror to fall back to SVG when all fail
+        var tried = 0;
+        function tryNext(){
+          if (tried >= candidates.length) {
+            img.onerror = null;
+            img.src = svgDataUrl;
+            return;
+          }
+          var candidate = candidates[tried++];
+          img.onerror = tryNext;
+          img.src = candidate;
+        }
+        // initial attempt: if no candidates, use SVG immediately
+        if (candidates.length === 0) {
+          img.src = svgDataUrl;
+        } else {
+          tryNext();
+        }
+
+        // also store the selected image path in the pet item (if possible) so inventory can reference it later
+        try {
+          petItem.image = candidates && candidates.length ? candidates[0] : null;
+        } catch(e){}
+      }
+    } catch(e){
+      // fallback silencioso para SVG se algo falhar
+      try {
+        var img = document.getElementById('incubator-page-preview') || document.getElementById('incubator-preview') || document.querySelector('.incubator-preview img');
+        if (img) {
+          var svg2 = '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"400\"><rect width=\"100%\" height=\"100%\" fill=\"#fff\" rx=\"16\" /><text x=\"50%\" y=\"50%\" font-size=\"160\" text-anchor=\"middle\" dominant-baseline=\"middle\">' + petEmoji + '</text><text x=\"50%\" y=\"88%\" font-size=\"28\" text-anchor=\"middle\" fill=\"#333\">' + petName + '</text></svg>';
+          img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg2);
+        }
+      } catch(ee){}
+    }
+
+    // pequena notificação visual (toast)
+    try {
+      var t = document.createElement('div');
+      t.className = 'rwd-toast';
+      t.textContent = 'Ovo chocou! Nasceu um ' + petName + ' ' + petEmoji;
+      Object.assign(t.style, {
+        position: 'fixed',
+        right: '20px',
+        bottom: '20px',
+        background: 'linear-gradient(90deg,#111827,#2563eb)',
+        color: '#fff',
+        padding: '10px 14px',
+        borderRadius: '10px',
+        boxShadow: '0 6px 20px rgba(2,6,23,0.12)',
+        zIndex: 11000,
+        fontWeight: '700'
+      });
+      document.body.appendChild(t);
+      setTimeout(function(){ t.style.opacity = '0'; t.style.transform = 'translateY(8px)'; }, 1600);
+      setTimeout(function(){ try { document.body.removeChild(t); } catch(e){} }, 2200);
+    } catch(e){}
+  } catch (e) {
+    console.error('attemptHatchEgg error', e);
+  }
+}
