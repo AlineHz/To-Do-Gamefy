@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Checklists</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- mini localStorage bus: dispatches StorageEvent + custom events so modules update without refresh -->
+<script>
+(function(){
+  try {
+    var origSet = Storage.prototype.setItem;
+    var origRemove = Storage.prototype.removeItem;
+
+    function dispatchChange(key, oldValue, newValue){
+      try {
+        // 1) dispatch a StorageEvent on window (so listeners on window 'storage' catch it, even in same window)
+        try {
+          var se = null;
+          try {
+            se = new StorageEvent('storage', {key: key, oldValue: oldValue, newValue: newValue, url: location.href, storageArea: localStorage});
+          } catch (e) {
+            // fallback: build a simpler event-like object
+            se = document.createEvent ? document.createEvent('StorageEvent') : null;
+          }
+          if (se && typeof window.dispatchEvent === 'function') window.dispatchEvent(se);
+        } catch (ee) { /* ignore */ }
+
+        // 2) dispatch a generic custom event on document
+        try {
+          document.dispatchEvent(new CustomEvent('mini_todo_storage_change', { detail: { key: key, oldValue: oldValue, newValue: newValue } }));
+        } catch (e){}
+
+        // 3) convenience: dispatch well-known module events for keys used across the app
+        try {
+          if (key === 'mini_todo_inventory_v1') {
+            document.dispatchEvent(new CustomEvent('mini_todo_inventory_changed', { detail: { key: key, oldValue: oldValue, newValue: newValue } }));
+          }
+          if (key === 'mini_todo_daily_missions_v1') {
+            document.dispatchEvent(new CustomEvent('mini_todo_missions_changed', { detail: { key: key, oldValue: oldValue, newValue: newValue } }));
+          }
+          if (key === 'mini_todo_data_v1') {
+            // app state changed (lists/pages/tasks)
+            document.dispatchEvent(new CustomEvent('mini_todo_appstate_changed', { detail: { key: key, oldValue: oldValue, newValue: newValue } }));
+          }
+          if (key === 'mini_todo_counted_tasks_v1' || key === 'mini_todo_counted_tasks_v2') {
+            document.dispatchEvent(new CustomEvent('mini_todo_counted_tasks_changed', { detail: { key: key, oldValue: oldValue, newValue: newValue } }));
+          }
+        } catch(e){}
+      } catch(e){}
+    }
+
+    Storage.prototype.setItem = function(key, value){
+      var old = this.getItem(key);
+      try { origSet.apply(this, [key, value]); } catch(e) { /* maybe readonly */ }
+      try { dispatchChange(String(key), old, String(value)); } catch(e){}
+    };
+
+    Storage.prototype.removeItem = function(key){
+      var old = this.getItem(key);
+      try { origRemove.apply(this, [key]); } catch(e){}
+      try { dispatchChange(String(key), old, null); } catch(e){}
+    };
+
+    // also patch clear() to broadcast (best-effort)
+    var origClear = Storage.prototype.clear;
+    Storage.prototype.clear = function(){
+      try {
+        var before = {};
+        for (var i=0;i<localStorage.length;i++){ var k = localStorage.key(i); before[k] = localStorage.getItem(k); }
+        origClear.apply(this, []);
+        // dispatch for each key removed
+        Object.keys(before).forEach(function(k){ dispatchChange(k, before[k], null); });
+      } catch(e){}
+    };
+
+  } catch(e) { console.error('mini storage-bus init error', e); }
+})();
+</script>
+
+
+
+  <!-- NAV TOPO -->
+  <nav id="top-nav" class="top-nav" role="navigation" aria-label="Navegação de páginas">
+    <div class="top-nav-left">
+      <!-- LEVEL / LV INDICATOR (à esquerda) -->
+      <div id="level-container" class="level-container" aria-hidden="false" title="Seu nível e progresso para o próximo nível">
+        <div id="level-badge" class="level-badge">LV 1</div>
+        <div class="level-progress" aria-hidden="true">
+          <div id="level-progress-bar" class="level-progress-bar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="pages-list" id="pages-list" role="tablist" aria-label="Páginas"></div>
+    </div>
+
+    <div class="top-nav-right">
+      <div class="pages-controls">
+        <!-- input de adicionar página (texto) -->
+        <input id="new-page-title" class="nav-input" type="text" placeholder="Nova página (título)" aria-label="Título da nova página" />
+
+        <!-- botões somente ícones -->
+        <button id="btn-add-page" class="nav-btn" type="button" title="Adicionar página" aria-label="Adicionar página">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <button id="btn-delete-page-nav" class="nav-btn trash-btn" type="button" title="Excluir página atual" aria-label="Excluir página atual">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 6h18M8 6v14a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6M10 6V4a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <button id="btn-edit-page" class="nav-btn edit-btn" type="button" title="Editar título da página atual" aria-label="Editar título da página atual">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+            <path d="M3 21l3-1 11-11 1-3-3 1L4 20zm14-14l3-3 3 3-3 3-3-3z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+      </div>
+    </div>
+  </nav>
+
+  <div id="app" class="container">
+
+    <!-- Sidebar esquerda -->
+    <aside class="sidebar">
+      <div style="height:10px"></div>
+
+      <div class="view-tabs" role="tablist" aria-label="Filtrar listas">
+        <button class="tab active" id="tab-active">Ativas</button>
+        <button class="tab" id="tab-planned">Planejados</button>
+        <button class="tab" id="tab-completed">Concluídas</button>
+      </div>
+
+      <form id="form-add-list" class="add-list" onsubmit="return false;">
+        <div class="top-row">
+          <input id="new-list-title" placeholder="Nova lista (ex: Compras)" />
+          <div class="top-row-controls">
+            <input id="new-list-date" type="date" />
+            <button id="btn-add-list" type="button">Adicionar</button>
+          </div>
+        </div>
+
+        <div class="repeat-controls" aria-label="Repetição da lista">
+          <input type="radio" id="repeat-once" name="repeat" value="once" checked>
+          <label for="repeat-once" class="repeat-label">Única</label>
+
+          <input type="radio" id="repeat-daily" name="repeat" value="daily">
+          <label for="repeat-daily" class="repeat-label">Diária</label>
+
+          <input type="radio" id="repeat-weekly" name="repeat" value="weekly">
+          <label for="repeat-weekly" class="repeat-label">Semanal</label>
+
+          <input type="radio" id="repeat-monthly" name="repeat" value="monthly">
+          <label for="repeat-monthly" class="repeat-label">Mensal</label>
+        </div>
+
+        <div id="list-repeat-controls" class="list-repeat-controls" aria-label="Dias da semana">
+          <!-- weekly checkboxes (visíveis quando semanal) -->
+          <div id="weekly-controls" style="display:flex;gap:6px;flex-wrap:wrap;">
+            <label><input type="checkbox" name="list-repeat-days" value="0"> Dom</label>
+            <label><input type="checkbox" name="list-repeat-days" value="1"> Seg</label>
+            <label><input type="checkbox" name="list-repeat-days" value="2"> Ter</label>
+            <label><input type="checkbox" name="list-repeat-days" value="3"> Qua</label>
+            <label><input type="checkbox" name="list-repeat-days" value="4"> Qui</label>
+            <label><input type="checkbox" name="list-repeat-days" value="5"> Sex</label>
+            <label><input type="checkbox" name="list-repeat-days" value="6"> Sáb</label>
+          </div>
+
+          <!-- monthly control (visível quando mensal) -->
+          <div id="monthly-controls" style="display:none;flex-direction:column;align-items:flex-start;gap:6px;">
+            <input id="new-list-month-day" type="number" min="1" max="31" placeholder="Insira o dia do mês, ex: 15" />
+            <div style="font-size:12px;color:#6b7280">Se o mês não tiver esse dia, será usado o último dia do mês.</div>
+          </div>
+        </div>
+      </form>
+
+      <div class="lists" id="lists" role="list"></div>
+      <div class="hint">Dica: clique em uma lista para ver / adicionar tarefas. Aperte Enter para enviar.</div>
+    </aside>
+
+    <!-- Coluna direita -->
+    <div class="right-column">
+
+      <!-- Progresso Total (barra + pontos) -->
+      <div class="progress-sidebar">
+        <div id="fixed-progress-title">Progresso Total</div>
+
+        <div class="progress-row">
+          <div class="progress large" id="global-progress">
+            <div class="progress-bar"></div>
+            <div class="progress-percent" id="global-progress-percent">0%</div>
+          </div>
+
+          <div id="global-points-container" class="points">
+            <span id="global-points">0</span> pts
+          </div>
+        </div>
+      </div>
+
+      <!-- Conteúdo principal -->
+      <main class="content">
+        <div class="content-header">
+          <h3 id="selected-list-title" class="selected-title">Selecione uma lista</h3>
+          <div id="list-stats" class="list-meta"></div>
+        </div>
+
+        <div id="empty-state" class="empty">Escolha (ou crie) uma lista à esquerda para começar.</div>
+
+        <div id="list-area" style="display:none;flex-direction:column;height:100%">
+          <form id="form-add-task" class="task-input" onsubmit="return false;">
+            <input id="new-task-text" placeholder="Adicionar nova tarefa..." />
+            <button id="btn-add-task" type="button">Adicionar</button>
+          </form>
+
+          <div class="tasks" id="tasks"></div>
+
+          <div class="footer">
+            <div id="remaining">0 tarefas restantes</div>
+            <div class="footer-actions">
+              <button id="btn-delete-list" class="btn-secondary">Excluir lista</button>
+              <button id="btn-confirm" class="confirm-btn" disabled>Confirmar conclusão</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Victory pop e confetti canvas (overlay) -->
+  <div id="victory-pop" class="victory hidden" aria-hidden="true">
+    <canvas id="confetti-canvas"></canvas>
+    <div class="victory-card" role="dialog" aria-live="assertive">
+      <div class="victory-badge">🏆</div>
+      <div class="victory-title">Conquista!</div>
+      <div class="victory-sub">Barra de progresso 100% — ótimo trabalho 🎉</div>
+    </div>
+  </div>
+
+ <script src="script.js"></script>
+<script src="rewards.js"></script>
+<script src="slot.js"></script>
+<script src="incubadora.js"></script>
+<script src="daily-mission.js"></script>
+<script src="pet-roster.js"></script>
+</body>
+</html>

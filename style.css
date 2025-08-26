@@ -1,0 +1,1501 @@
+/* reset */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#app{height:100%}
+body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#f4f6f8;color:#111827}
+
+/* layout */
+.container{display:flex;gap:20px;height:100vh;padding:20px;align-items:stretch;min-height:0}
+.sidebar{width:320px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 6px 20px rgba(17,24,39,.06);display:flex;flex-direction:column;overflow:hidden}
+.brand{font-weight:700;font-size:18px;margin-bottom:12px}
+.hint{margin-top:12px;font-size:13px;color:#6b7280}
+
+/* right */
+.right-column{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
+
+/* progress */
+.progress-sidebar{background:#fff;border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(17,24,39,.06)}
+.progress-row{display:flex;align-items:center;gap:12px}
+.progress{position:relative;background:#e6eef6;border-radius:999px;overflow:hidden;height:14px;width:100%}
+.progress.large{height:20px}
+.progress-bar{position:absolute;left:0;top:0;height:100%;width:0%;background:linear-gradient(90deg,#10b981,#34d399);transition:width 350ms ease}
+.progress-percent{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:12px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.35)}
+
+/* points & badge */
+#global-points-container{font-weight:700;font-size:16px;color:#111827;background:#f8fafc;padding:8px 12px;border-radius:8px;border:1px solid #e6eef6;min-width:90px;text-align:center;position:relative;overflow:visible}
+.points-badge{position:absolute;right:8px;top:-6px;padding:6px 8px;border-radius:8px;font-weight:700;font-size:13px;opacity:0;pointer-events:none;transform:translateY(0);animation:floatUp 1000ms ease-out forwards;background:rgba(16,185,129,0.12);color:#059669;border:1px solid rgba(16,185,129,0.18)}
+.points-badge.negative{background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.12)}
+@keyframes floatUp{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-30px);opacity:0}}
+
+/* victory pop */
+.victory{position:fixed;inset:0;Display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:9999}
+.victory.hidden{display:none}
+.victory-card{pointer-events:auto;background:linear-gradient(180deg,#fff,#f9fafb);border-radius:14px;padding:22px 28px;box-shadow:0 10px 40px rgba(2,6,23,0.35);text-align:center;min-width:260px;transform:scale(0.6);opacity:0;animation:popIn 650ms cubic-bezier(.2,.9,.2,1) forwards}
+@keyframes popIn{0%{transform:scale(0.6);opacity:0}60%{transform:scale(1.06);opacity:1}100%{transform:scale(1);opacity:1}}
+#confetti-canvas{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9998}
+
+/* content */
+.content{flex:1;background:#fff;border-radius:12px;padding:18px;box-shadow:0 6px 20px rgba(17,24,39,.06);display:flex;flex-direction:column;min-width:0}
+.content-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.selected-title{font-size:15px;margin-top:6px;color:#374151;font-weight:600}
+.list-meta{font-size:13px;color:#4b5563}
+.empty{margin-top:18px;color:#6b7280}
+
+/* add list/task */
+.add-list{display:flex;flex-direction:column;gap:8px}
+.top-row{display:flex;flex-direction:column;gap:8px}
+.top-row-controls{display:flex;gap:8px;align-items:center}
+.top-row input{padding:8px;border:1px solid #e6e9ee;border-radius:8px}
+.top-row button{padding:8px 12px;border-radius:8px;border:none;background:#2563eb;color:#fff;cursor:pointer}
+
+/* lists */
+.lists{margin-top:12px;overflow:auto;flex:1;min-height:0}
+.list-item{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:8px;cursor:pointer;transition:all .15s}
+.list-item:hover{background:#f1f5f9}
+.list-item.selected{background:#eef2ff}
+.list-left{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.list-meta{font-size:13px;color:#4b5563}
+.list-item.editing{background:#fffaf6;padding:14px;box-shadow:0 4px 14px rgba(16,24,40,0.06)}
+
+/* edit form */
+.edit-form{display:flex;flex-direction:column;gap:8px;width:100%}
+.edit-form input{padding:8px 10px;border-radius:8px;border:1px solid #e6e9ee}
+.edit-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:6px}
+.btn-save{background:#10b981;color:#fff;padding:8px 12px;border-radius:8px;border:none}
+.btn-cancel{background:#f3f4f6;padding:8px 12px;border-radius:8px;border:1px solid #e5e7eb}
+
+/* tasks */
+.task-input{display:flex;gap:8px;margin-top:12px;align-items:center}
+.task-input input{flex:1;padding:10px;border:1px solid #e6e9ee;border-radius:8px}
+.task-input button{padding:10px 14px;border-radius:8px;border:none;background:#10b981;color:#fff;cursor:pointer}
+.tasks{margin-top:12px;overflow:auto;flex:1;min-height:0}
+.task{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px}
+.task.done .text{text-decoration:line-through;color:#6b7280}
+.text{flex:1;min-width:0}
+.trash{background:transparent;border:none;cursor:pointer}
+
+/* footer */
+.footer{margin-top:auto;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#374151}
+.btn-secondary{margin-right:8px;padding:8px;border-radius:8px;border:1px solid #e5e7eb;background:#f3f4f6}
+.confirm-btn{padding:8px 12px;border-radius:8px;border:none;background:#ef4444;color:#fff}
+.confirm-btn[disabled]{opacity:.5;cursor:not-allowed}
+
+@media (max-width:800px){
+  .container{flex-direction:column;padding:12px}
+  .sidebar{width:100%}
+  .right-column{width:100%}
+}
+
+/* confetti canvas covers viewport */
+#confetti-canvas {
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:9998; /* behind the card but above app */
+}
+
+/* View tabs */
+.view-tabs{display:flex;gap:8px;margin-bottom:10px}
+.tab{flex:1;padding:8px;border-radius:8px;border:1px solid transparent;background:transparent;cursor:pointer;font-weight:600;font-size:13px;color:#374151}
+.tab:hover{background:#f8fafc}
+.tab.active{background:#eef2ff;border-color:#c7ddff;color:#0f172a}
+
+/* Form adicionar lista */
+.add-list{display:flex;flex-direction:column;gap:8px}
+.top-row{display:flex;flex-direction:column;gap:8px}
+.top-row-controls{display:flex;gap:8px;align-items:center}
+.top-row-controls > * {flex:1;min-width:0}
+
+.top-row input{padding:8px;border:1px solid #e6e9ee;border-radius:8px}
+.top-row input#new-list-title{width:100%;min-width:0}
+.top-row input#new-list-date{
+  min-width:0;
+  padding:8px;
+  border-radius:8px;
+  border:1px solid #e6e9ee;
+}
+.top-row button{
+  padding:8px 12px;
+  border-radius:8px;
+  border:none;
+  background:#2563eb;
+  color:#fff;
+  cursor:pointer;
+  min-width:0;
+}
+
+/* Controls repetição */
+.repeat-controls{display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.repeat-controls input[type="radio"]{display:none}
+.repeat-label{font-size:12px;padding:6px 8px;border-radius:8px;border:1px solid transparent;cursor:pointer;background:transparent;color:#374151}
+.repeat-controls input[type="radio"]:checked + .repeat-label{background:#eef2ff;border-color:#c7ddff;color:#0f172a}
+
+/* Seleção de dias */
+.list-repeat-controls {
+  display:none;
+  gap:6px;
+  margin-top:6px;
+  flex-wrap:wrap;
+  font-size:12px;
+  color:#374151;
+  align-items:center;
+}
+.list-repeat-controls label{
+  background:#f3f4f6;
+  padding:6px 8px;
+  border-radius:6px;
+  cursor:pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  user-select:none;
+}
+.list-repeat-controls input[type="checkbox"]{width:14px;height:14px}
+
+/* Lists */
+.lists{margin-top:12px;overflow:auto;flex:1;min-height:0}
+.list-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px;
+  border-radius:8px;
+  cursor:pointer;
+  transition:all .15s ease;
+}
+.list-item:hover{background:#f1f5f9}
+.list-item.selected{background:#eef2ff}
+.list-meta{font-size:13px;color:#4b5563}
+.list-left{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+
+/* When item is editing: make it taller and give space for the form */
+.list-item.editing{
+  background:#fffaf6;
+  padding:14px;
+  box-shadow: 0 4px 14px rgba(16,24,40,0.06);
+}
+
+/* Edit form inside list item (vertical layout as requested) */
+.edit-form{
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  width:100%;
+}
+.edit-form input[type="text"],
+.edit-form input[type="date"]{
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid #e6e9ee;
+  font-size:14px;
+  width:100%;
+  background:#fff;
+}
+.edit-form .edit-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-top:6px;
+}
+.edit-form .btn-save, .edit-form .btn-cancel{
+  padding:8px 12px;
+  border-radius:8px;
+  border:none;
+  cursor:pointer;
+  font-size:14px;
+}
+.edit-form .btn-save{background:#10b981;color:#fff}
+.edit-form .btn-cancel{background:#f3f4f6;color:#111827;border:1px solid #e5e7eb}
+
+/* Edit icon button */
+.btn-icon{
+  background:transparent;
+  border:none;
+  cursor:pointer;
+  font-size:16px;
+  padding:6px;
+  border-radius:6px;
+}
+
+/* Progress */
+.progress{position:relative;background:#e6eef6;border-radius:999px;overflow:hidden;height:14px;width:100%}
+.progress.large{height:20px}
+.progress.small{height:14px;width:100%}
+.progress-bar{position:absolute;left:0;top:0;height:100%;width:0%;background:linear-gradient(90deg,#10b981,#34d399);transition:width 300ms ease}
+.progress .progress-percent{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:12px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.35);pointer-events:none}
+
+/* Conteúdo principal */
+.content{
+  flex:1;
+  background:#fff;
+  border-radius:12px;
+  padding:18px;
+  box-shadow:0 6px 20px rgba(17,24,39,.06);
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+}
+.content-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.content-header h3{margin:0}
+
+.selected-title{font-size:15px;margin-top:8px;color:#374151;font-weight:600}
+
+/* Form adicionar tarefa */
+.task-input{display:flex;gap:8px;margin-top:12px;align-items:center;flex-wrap:wrap}
+.task-input input{flex:1;padding:10px;border:1px solid #e6e9ee;border-radius:8px;min-width:0}
+.task-input button{padding:10px 14px;border-radius:8px;border:none;background:#10b981;color:#fff;cursor:pointer;flex:none}
+
+/* Tasks */
+.tasks{margin-top:12px;overflow:auto;flex:1;min-height:0}
+.task{display:flex;align-items:center;gap:12px;padding:10px;border-radius:8px}
+.task.done .text{text-decoration:line-through;color:#6b7280}
+.task .text{flex:1;min-width:0}
+.task .trash{background:transparent;border:none;cursor:pointer}
+
+/* Footer */
+.footer{margin-top:auto;display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#374151}
+.confirm-btn{padding:8px 12px;border-radius:8px;border:none;background:#ef4444;color:#fff;cursor:pointer}
+.confirm-btn[disabled]{opacity:.5;cursor:not-allowed}
+
+.planned-item .list-left .list-meta{color:#374151;font-weight:600}
+
+@media (max-width:800px){
+  .container{flex-direction:column;padding:12px}
+  .sidebar{width:100%}
+  .right-column{width:100%}
+}
+#fixed-progress-title {
+  font-weight: 700;
+  font-size: 14px;
+}
+/* Top nav */
+.top-nav{
+  width:100%;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 20px;
+  box-shadow:0 4px 14px rgba(2,6,23,0.06);
+  position:sticky;
+  top:0;
+  z-index:80;
+  flex-wrap:wrap;
+}
+
+/* left side: pages buttons (scrollable) */
+.top-nav .pages-list{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  overflow:auto;
+  max-width:60vw;
+  padding-bottom:2px;
+}
+
+/* small tweak to tab buttons used as page items */
+.top-nav .pages-list .tab{
+  padding:6px 10px;
+  font-size:14px;
+  border-radius:8px;
+  border:1px solid transparent;
+  background:transparent;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.top-nav .pages-list .tab.active{
+  background:#eef2ff;
+  border-color:#c7ddff;
+  color:#0f172a;
+}
+
+/* right side controls */
+.top-nav .pages-controls{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+/* input para novo título de página */
+.top-nav input#new-page-title{
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid #e6e9ee;
+  min-width:180px;
+  max-width:28ch;
+  background:#fff;
+}
+
+/* NAV: botões agora apenas ícones (tamanho fixo, centrados) */
+.top-nav .pages-controls .nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+  box-sizing: border-box;
+  background: transparent;
+  color: #111827;
+}
+.top-nav .pages-controls .nav-btn:hover {
+  background: #f3f4f6;
+}
+.top-nav .pages-controls .nav-btn svg {
+  display:block;
+  width:18px;
+  height:18px;
+}
+
+/* special style for add page (accent) */
+.top-nav .pages-controls .nav-btn#btn-add-page {
+  background: #2563eb;
+  color: #fff;
+  width:40px;
+  height:40px;
+  border-radius:10px;
+}
+.top-nav .pages-controls .nav-btn#btn-add-page svg {
+  stroke: #fff;
+  fill: none;
+}
+
+/* delete page button in nav */
+.top-nav .pages-controls .nav-btn.trash-btn {
+  background: transparent;
+  border: 1px solid rgba(229,231,235,0.9);
+  color: #111827;
+}
+.top-nav .pages-controls .nav-btn.trash-btn svg {
+  stroke: currentColor;
+}
+
+/* responsividade: mantém proporção em telas pequenas */
+@media (max-width: 520px) {
+  .top-nav input#new-page-title { min-width: 120px; max-width: 20ch; padding: 6px 8px; height: 36px; }
+  .top-nav .pages-controls .nav-btn { width: 36px; height: 36px; }
+  .top-nav .pages-controls .nav-btn svg { width:16px; height:16px; }
+}
+/* reset */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#app{height:100%}
+body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#f4f6f8;color:#111827}
+
+/* layout */
+.container{display:flex;gap:20px;height:100vh;padding:20px;align-items:stretch;min-height:0}
+.sidebar{width:320px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 6px 20px rgba(17,24,39,.06);display:flex;flex-direction:column;overflow:hidden}
+.hint{margin-top:12px;font-size:13px;color:#6b7280}
+
+/* right */
+.right-column{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
+
+/* progress */
+.progress-sidebar{background:#fff;border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(17,24,39,.06)}
+.progress-row{display:flex;align-items:center;gap:12px}
+.progress{position:relative;background:#e6eef6;border-radius:999px;overflow:hidden;height:14px;width:100%}
+.progress.large{height:20px}
+.progress-bar{position:absolute;left:0;top:0;height:100%;width:0%;background:linear-gradient(90deg,#10b981,#34d399);transition:width 350ms ease}
+.progress-percent{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:12px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.35)}
+
+/* points & badge */
+#global-points-container{font-weight:700;font-size:16px;color:#111827;background:#f8fafc;padding:8px 12px;border-radius:8px;border:1px solid #e6eef6;min-width:90px;text-align:center;position:relative;overflow:visible}
+.points-badge{position:absolute;right:8px;top:-6px;padding:6px 8px;border-radius:8px;font-weight:700;font-size:13px;opacity:0;pointer-events:none;transform:translateY(0);animation:floatUp 1000ms ease-out forwards;background:rgba(16,185,129,0.12);color:#059669;border:1px solid rgba(16,185,129,0.18)}
+.points-badge.negative{background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.12)}
+@keyframes floatUp{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-30px);opacity:0}}
+
+/* content */
+.content{flex:1;background:#fff;border-radius:12px;padding:18px;box-shadow:0 6px 20px rgba(17,24,39,.06);display:flex;flex-direction:column;min-width:0}
+.content-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.selected-title{font-size:15px;margin-top:6px;color:#374151;font-weight:600}
+.list-meta{font-size:13px;color:#4b5563}
+.empty{margin-top:18px;color:#6b7280}
+
+/* Sidebar / lists / tasks — (inalterado) */
+/* ... (mantive todo o CSS original para o resto da UI) ... */
+
+/* Top nav */
+.top-nav{
+  width:100%;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 20px;
+  box-shadow:0 4px 14px rgba(2,6,23,0.06);
+  position:sticky;
+  top:0;
+  z-index:80;
+  flex-wrap:wrap;
+}
+
+/* left side: pages buttons (scrollable) */
+.top-nav .pages-list{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  overflow:auto;
+  max-width:60vw;
+  padding-bottom:2px;
+}
+
+/* page tabs */
+.top-nav .pages-list .tab{
+  padding:6px 10px;
+  font-size:14px;
+  border-radius:8px;
+  border:1px solid transparent;
+  background:transparent;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.top-nav .pages-list .tab.active{
+  background:#eef2ff;
+  border-color:#c7ddff;
+  color:#0f172a;
+}
+
+/* right side controls */
+.top-nav .pages-controls{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+/* NAV: botões agora apenas ícones (tamanho fixo, centrados) */
+.top-nav .pages-controls .nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 10px;
+  border: none;                /* padrão sem border; botões específicos recebem border */
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+  box-sizing: border-box;
+  background: transparent;
+  color: #111827;
+}
+.top-nav .pages-controls .nav-btn:hover {
+  background: #f3f4f6;
+}
+.top-nav .pages-controls .nav-btn svg {
+  display:block;
+  width:18px;
+  height:18px;
+}
+
+/* adicionar (destaque azul) */
+.top-nav .pages-controls .nav-btn#btn-add-page {
+  background: #2563eb;
+  color: #fff;
+  width:40px;
+  height:40px;
+  border-radius:10px;
+  border: none;
+}
+.top-nav .pages-controls .nav-btn#btn-add-page svg {
+  stroke: #fff;
+  fill: none;
+}
+
+/* excluir (bordado) */
+.top-nav .pages-controls .nav-btn.trash-btn {
+  background: transparent;
+  border: 1px solid rgba(229,231,235,0.9);
+  color: #111827;
+}
+.top-nav .pages-controls .nav-btn.trash-btn svg {
+  stroke: currentColor;
+}
+
+/* editar: agora com border igual ao excluir para padronizar */
+.top-nav .pages-controls .nav-btn.edit-btn {
+  background: transparent;
+  border: 1px solid rgba(229,231,235,0.9); /* mesma borda do trash */
+  color: #111827;
+}
+.top-nav .pages-controls .nav-btn.edit-btn svg {
+  stroke: currentColor;
+}
+
+/* reset */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#app{height:100%}
+body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#f4f6f8;color:#111827}
+
+/* layout */
+.container{display:flex;gap:20px;height:100vh;padding:20px;align-items:stretch;min-height:0}
+.sidebar{width:320px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 6px 20px rgba(17,24,39,.06);display:flex;flex-direction:column;overflow:hidden}
+.hint{margin-top:12px;font-size:13px;color:#6b7280}
+
+/* right */
+.right-column{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
+
+/* progress */
+.progress-sidebar{background:#fff;border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(17,24,39,.06)}
+.progress-row{display:flex;align-items:center;gap:12px}
+.progress{position:relative;background:#e6eef6;border-radius:999px;overflow:hidden;height:14px;width:100%}
+.progress.large{height:20px}
+.progress-bar{position:absolute;left:0;top:0;height:100%;width:0%;background:linear-gradient(90deg,#10b981,#34d399);transition:width 350ms ease}
+.progress-percent{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:12px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.35)}
+
+/* points & badge */
+#global-points-container{font-weight:700;font-size:16px;color:#111827;background:#f8fafc;padding:8px 12px;border-radius:8px;border:1px solid #e6eef6;min-width:90px;text-align:center;position:relative;overflow:visible}
+.points-badge{position:absolute;right:8px;top:-6px;padding:6px 8px;border-radius:8px;font-weight:700;font-size:13px;opacity:0;pointer-events:none;transform:translateY(0);animation:floatUp 1000ms ease-out forwards;background:rgba(16,185,129,0.12);color:#059669;border:1px solid rgba(16,185,129,0.18)}
+.points-badge.negative{background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.12)}
+@keyframes floatUp{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-30px);opacity:0}}
+
+/* content */
+.content{flex:1;background:#fff;border-radius:12px;padding:18px;box-shadow:0 6px 20px rgba(17,24,39,.06);display:flex;flex-direction:column;min-width:0}
+.content-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.selected-title{font-size:15px;margin-top:6px;color:#374151;font-weight:600}
+.list-meta{font-size:13px;color:#4b5563}
+.empty{margin-top:18px;color:#6b7280}
+
+/* Sidebar / lists / tasks — (mantive as regras originais do seu projeto) */
+
+/* Top nav */
+.top-nav{
+  width:100%;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 20px;
+  box-shadow:0 4px 14px rgba(2,6,23,0.06);
+  position:sticky;
+  top:0;
+  z-index:80;
+  flex-wrap:wrap;
+}
+
+/* left side: pages buttons (scrollable) */
+.top-nav .pages-list{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  overflow:auto;
+  max-width:60vw;
+  padding-bottom:2px;
+}
+
+/* page tabs */
+.top-nav .pages-list .tab{
+  padding:6px 10px;
+  font-size:14px;
+  border-radius:8px;
+  border:1px solid transparent;
+  background:transparent;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.top-nav .pages-list .tab.active{
+  background:#eef2ff;
+  border-color:#c7ddff;
+  color:#0f172a;
+}
+
+/* right side controls */
+.top-nav .pages-controls{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+/* NAV: botões apenas ícones (tamanho fixo, centrados) */
+.top-nav .pages-controls .nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 10px;
+  border: none;                /* padrão sem border; botões específicos recebem border */
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+  box-sizing: border-box;
+  background: transparent;
+  color: #111827;
+}
+.top-nav .pages-controls .nav-btn:hover {
+  background: #f3f4f6;
+}
+.top-nav .pages-controls .nav-btn svg {
+  display:block;
+  width:18px;
+  height:18px;
+}
+
+/* adicionar (destaque azul) */
+.top-nav .pages-controls .nav-btn#btn-add-page {
+  background: #2563eb;
+  color: #fff;
+  width:40px;
+  height:40px;
+  border-radius:10px;
+  border: none;
+}
+.top-nav .pages-controls .nav-btn#btn-add-page svg {
+  stroke: #fff;
+  fill: none;
+}
+
+/* excluir (bordado) */
+.top-nav .pages-controls .nav-btn.trash-btn {
+  background: transparent;
+  border: 1px solid rgba(229,231,235,0.9);
+  color: #111827;
+}
+.top-nav .pages-controls .nav-btn.trash-btn svg {
+  stroke: currentColor;
+}
+
+/* editar: com border igual ao excluir para padronizar */
+.top-nav .pages-controls .nav-btn.edit-btn {
+  background: transparent;
+  border: 1px solid rgba(229,231,235,0.9); /* mesma borda do trash */
+  color: #111827;
+}
+.top-nav .pages-controls .nav-btn.edit-btn svg {
+  stroke: currentColor;
+}
+
+/* input: altura igual aos botões, largura restaurada ao comportamento anterior */
+.top-nav input#new-page-title{
+  height: 40px;                 /* mesma altura dos botões */
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(229,231,235,0.9); /* mesma borda do trash/edit */
+  background: #fff;
+  font-size: 13px;
+  line-height: 40px;
+  text-align: left;             /* como antes: texto alinhado à esquerda */
+  min-width: 180px;             /* largura restaurada para o comportamento anterior */
+  max-width: 28ch;
+  box-sizing: border-box;
+  outline: none;
+}
+.top-nav input#new-page-title::placeholder {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Em telas bem pequenas, ainda reduz um pouco */
+@media (max-width: 520px) {
+  .top-nav input#new-page-title { min-width: 120px; max-width: 20ch; padding: 6px 8px; height: 36px; line-height:36px; }
+  .top-nav .pages-controls .nav-btn { width: 36px; height: 36px; }
+  .top-nav .pages-controls .nav-btn svg { width:16px; height:16px; }
+}
+
+/* Quando o espaço disponível for grande, o input pode crescer até um limite maior (opcional) */
+@media (min-width: 900px){
+  .top-nav input#new-page-title {
+    max-width: 340px;
+  }
+}
+
+/* ------------------------------
+  Mantive o restante do CSS do seu projeto (listas, tarefas, etc.)
+  para garantir compatibilidade com o script.js original.
+------------------------------- */
+/* reset */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#app{height:100%}
+body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#f4f6f8;color:#111827}
+
+/* layout */
+.container{display:flex;gap:20px;height:100vh;padding:20px;align-items:stretch;min-height:0}
+.sidebar{width:320px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 6px 20px rgba(17,24,39,.06);display:flex;flex-direction:column;overflow:hidden}
+.hint{margin-top:12px;font-size:13px;color:#6b7280}
+
+/* right */
+.right-column{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
+
+/* progress */
+.progress-sidebar{background:#fff;border-radius:12px;padding:12px;box-shadow:0 6px 20px rgba(17,24,39,.06)}
+.progress-row{display:flex;align-items:center;gap:12px}
+.progress{position:relative;background:#e6eef6;border-radius:999px;overflow:hidden;height:14px;width:100%}
+.progress.large{height:20px}
+.progress-bar{position:absolute;left:0;top:0;height:100%;width:0%;background:linear-gradient(90deg,#10b981,#34d399);transition:width 350ms ease}
+.progress-percent{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:12px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.35)}
+
+/* points & badge */
+#global-points-container{font-weight:700;font-size:16px;color:#111827;background:#f8fafc;padding:8px 12px;border-radius:8px;border:1px solid #e6eef6;min-width:90px;text-align:center;position:relative;overflow:visible}
+.points-badge{position:absolute;right:8px;top:-6px;padding:6px 8px;border-radius:8px;font-weight:700;font-size:13px;opacity:0;pointer-events:none;transform:translateY(0);animation:floatUp 1000ms ease-out forwards;background:rgba(16,185,129,0.12);color:#059669;border:1px solid rgba(16,185,129,0.18)}
+.points-badge.negative{background:rgba(239,68,68,0.08);color:#ef4444;border:1px solid rgba(239,68,68,0.12)}
+@keyframes floatUp{0%{transform:translateY(0);opacity:1}100%{transform:translateY(-30px);opacity:0}}
+
+/* content */
+.content{flex:1;background:#fff;border-radius:12px;padding:18px;box-shadow:0 6px 20px rgba(17,24,39,.06);display:flex;flex-direction:column;min-width:0}
+.content-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.selected-title{font-size:15px;margin-top:6px;color:#374151;font-weight:600}
+.list-meta{font-size:13px;color:#4b5563}
+.empty{margin-top:18px;color:#6b7280}
+
+/* Top nav */
+.top-nav{
+  width:100%;
+  background:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:12px 20px;
+  box-shadow:0 4px 14px rgba(2,6,23,0.06);
+  position:sticky;
+  top:0;
+  z-index:80;
+  flex-wrap:wrap;
+}
+
+/* left side: pages buttons (scrollable) */
+.top-nav .pages-list{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  overflow:auto;
+  max-width:60vw;
+  padding-bottom:2px;
+  align-items:center;
+}
+
+/* LEVEL container (esquerda) */
+.level-container{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  margin-right:12px;
+  min-width:64px;
+}
+.level-badge{
+  background:#111827;
+  color:#fff;
+  padding:6px 8px;
+  border-radius:8px;
+  font-weight:700;
+  font-size:13px;
+  min-width:48px;
+  text-align:center;
+  box-shadow:0 4px 10px rgba(2,6,23,0.08);
+}
+.level-progress{
+  margin-top:6px;
+  width:100%;
+  height:6px;
+  background:#eef2ff;
+  border-radius:6px;
+  overflow:hidden;
+  min-width:48px;
+}
+.level-progress-bar{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#f59e0b,#f97316);
+  transition:width 600ms cubic-bezier(.2,.9,.2,1);
+}
+
+/* page tabs */
+.top-nav .pages-list .tab{
+  padding:6px 10px;
+  font-size:14px;
+  border-radius:8px;
+  border:1px solid transparent;
+  background:transparent;
+  cursor:pointer;
+  white-space:nowrap;
+  min-height:40px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.top-nav .pages-list .tab.active{
+  background:#eef2ff;
+  border-color:#c7ddff;
+  color:#0f172a;
+}
+
+/* tab editing state: remove default content spacing so input fits */
+.top-nav .pages-list .tab.editing{
+  padding:4px;
+  display:inline-flex;
+  align-items:center;
+}
+
+/* input inside tab while editing */
+.pages-list .tab.editing input.page-tab-input{
+  width:100%;
+  height:32px;
+  padding:6px 8px;
+  border-radius:6px;
+  border:1px solid rgba(148,163,184,0.25);
+  font-size:14px;
+  box-sizing:border-box;
+  outline: none;
+}
+
+/* right side controls */
+.top-nav .pages-controls{
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+
+/* NAV: botões apenas ícones (tamanho fixo, centrados) */
+.top-nav .pages-controls .nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+  box-sizing: border-box;
+  background: transparent;
+  color: #111827;
+}
+.top-nav .pages-controls .nav-btn:hover {
+  background: #f3f4f6;
+}
+.top-nav .pages-controls .nav-btn svg {
+  display:block;
+  width:18px;
+  height:18px;
+}
+
+/* adicionar (destaque azul) */
+.top-nav .pages-controls .nav-btn#btn-add-page {
+  background: #2563eb;
+  color: #fff;
+  width:40px;
+  height:40px;
+  border-radius:10px;
+  border: none;
+}
+.top-nav .pages-controls .nav-btn#btn-add-page svg {
+  stroke: #fff;
+  fill: none;
+}
+
+/* excluir (bordado) */
+.top-nav .pages-controls .nav-btn.trash-btn {
+  background: transparent;
+  border: 1px solid rgba(229,231,235,0.9);
+  color: #111827;
+}
+.top-nav .pages-controls .nav-btn.trash-btn svg {
+  stroke: currentColor;
+}
+
+/* editar: com border igual ao excluir para padronizar */
+.top-nav .pages-controls .nav-btn.edit-btn {
+  background: transparent;
+  border: 1px solid rgba(229,231,235,0.9);
+  color: #111827;
+}
+.top-nav .pages-controls .nav-btn.edit-btn svg {
+  stroke: currentColor;
+}
+
+/* input new-page-title: restaurado à largura anterior, altura igual aos botões */
+.top-nav input#new-page-title{
+  height: 40px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(229,231,235,0.9);
+  background: #fff;
+  font-size: 13px;
+  line-height: 40px;
+  text-align: left;
+  min-width: 180px;
+  max-width: 28ch;
+  box-sizing: border-box;
+  outline: none;
+}
+.top-nav input#new-page-title::placeholder {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* responsividade */
+@media (max-width: 520px) {
+  .top-nav input#new-page-title { min-width: 120px; max-width: 20ch; padding: 6px 8px; height: 36px; line-height:36px; }
+  .top-nav .pages-controls .nav-btn { width: 36px; height: 36px; }
+  .top-nav .pages-controls .nav-btn svg { width:16px; height:16px; }
+  .level-container { display:none; } /* esconde indicador de level em telas muito pequenas */
+}
+/* ===== Ajuste: indicador de nível à ESQUERDA das abas (pages list) ===== */
+.top-nav-left {
+  display: flex;
+  align-items: center;    /* alinha badge e abas verticalmente */
+  gap: 12px;
+  min-width: 0;          /* importante para permitir overflow do .pages-list */
+}
+
+/* força o indicador a ficar em coluna (badge + barra) e ter largura fixa */
+.top-nav-left .level-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 78px;        /* largura fixa razoável; ajuste se quiser maior/menor */
+  margin-right: 8px;
+  min-width: 64px;
+}
+
+/* badge (LV) */
+.top-nav-left .level-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  background: #111827;
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(2,6,23,0.08);
+}
+
+/* barra de progresso do level (pequena) */
+.top-nav-left .level-progress {
+  width: 100%;
+  height: 6px;
+  border-radius: 6px;
+  background: #eef2ff;
+  overflow: hidden;
+}
+.top-nav-left .level-progress-bar {
+  height: 100%;
+  width: 0%;
+  transition: width 600ms cubic-bezier(.2,.9,.2,1);
+  background: linear-gradient(90deg,#f59e0b,#f97316);
+}
+
+/* faz as abas ocuparem o espaço restante e permanecerem roláveis */
+.top-nav-left .pages-list {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  overflow: auto;
+  flex: 1 1 auto;        /* importante: ocupa o restante do espaço */
+  min-width: 0;          /* permite truncamento / scroll interno */
+}
+
+/* mantém os botões de página com altura consistente */
+.top-nav-left .pages-list .tab {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+/* responsividade: em telas muito pequenas empilha topo (badge acima das abas) */
+@media (max-width: 520px) {
+  .top-nav-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .top-nav-left .level-container {
+    flex-direction: row;
+    gap: 10px;
+    width: auto;
+    flex: 0 0 auto;
+  }
+  .top-nav-left .pages-list { width: 100%; }
+}
+/* ===== Ajuste: Monthly controls - faz o campo "dia do mês" ocupar 100% da linha ===== */
+#monthly-controls,
+.monthly-controls {
+  /* o script pode setar display:flex em runtime; aqui definimos o comportamento padrão */
+  display: none;              /* mantido escondido por padrão */
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  margin-top: 6px;
+  font-size: 13px;
+  color: #374151;
+}
+
+#monthly-controls input[type="number"],
+.monthly-controls input[type="number"],
+#new-list-month-day {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #e6e9ee;
+  font-size: 14px;
+  box-sizing: border-box;
+  background: #ffffff;
+}
+
+/* dica visual menor para a mensagem de ajuda abaixo do campo */
+.monthly-controls .monthly-hint,
+#monthly-controls .monthly-hint {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+
+
+/* ---- styles for rewards inventory ---- */
+.rwd-inv-wrapper { }
+.rwd-inv-btn { cursor:pointer; font-weight:700; padding:6px 8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:transparent; }
+.rwd-inventory-panel { 
+  margin-top:10px; 
+  max-height:0; 
+  overflow:hidden; 
+  transition: max-height .28s ease, opacity .18s ease; 
+  opacity:0; 
+  background:linear-gradient(180deg, #ffffff, #fbfbff); 
+  border-radius:10px; 
+  padding:0 10px; 
+  box-shadow: 0 8px 24px rgba(2,6,23,0.06);
+}
+/* --- INVENTÁRIO: painel expansível com rolagem e botão Limpar sempre visível --- */
+
+.rwd-inventory-panel.open {
+  max-height: 420px;        /* limite visual do painel aberto (ajuste se quiser maior/menor) */
+  opacity: 1;
+  padding: 10px;
+  overflow: auto;          /* <-- permite barra de rolagem quando houver muitos itens */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* lista interna: limita altura interna e rola independentemente (melhora comportamento em alguns browsers) */
+.rwd-inv-list {
+  max-height: calc(420px - 76px); /* reserva espaço para header/ações; ajuste se alterar max-height do painel */
+  overflow-y: auto;
+  padding-right: 6px;             /* evita "shift" de layout quando aparece a barra de rolagem */
+}
+
+/* mantém o botão "Limpar inventário" sempre acessível (sticky no bottom do painel) */
+.rwd-inv-actions {
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,0.9), rgba(255,255,255,0.96));
+  padding-top: 8px;
+  border-top: 1px dashed #eef2ff;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* opcional: visual mais suave para scrollbars em WebKit (Chrome/Safari) */
+.rwd-inventory-panel.open::-webkit-scrollbar,
+.rwd-inv-list::-webkit-scrollbar { width: 10px; }
+.rwd-inventory-panel.open::-webkit-scrollbar-thumb,
+.rwd-inv-list::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.08);
+  border-radius: 8px;
+}
+.rwd-inv-empty { padding:10px 6px; color:#6b7280; font-size:13px; }
+.rwd-inv-list { display:flex; flex-direction:column; gap:8px; padding-bottom:6px; }
+.rwd-inv-item { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; padding:8px; border-radius:8px; background:linear-gradient(180deg,#fff,#fbfbff); border:1px solid #f3f4f6; }
+.rwd-inv-left { display:flex; gap:10px; align-items:flex-start; }
+.rwd-inv-emoji { font-size:20px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; background:linear-gradient(180deg,#f8fafc,#fff); border-radius:8px; box-shadow:0 4px 10px rgba(2,6,23,0.04); }
+.rwd-inv-meta { min-width:0; max-width:220px; }
+.rwd-inv-title { font-weight:700; font-size:13px; display:flex; gap:6px; align-items:center; }
+.rwd-inv-lv { font-weight:600; color:#6b7280; font-size:12px; margin-left:6px; }
+.rwd-inv-desc { font-size:12px; color:#6b7280; margin-top:4px; line-height:1.2; }
+.rwd-inv-time { font-size:11px; color:#9ca3af; min-width:80px; text-align:right; }
+.rwd-inv-actions { padding-top:8px; border-top:1px dashed #eef2ff; display:flex; justify-content:flex-end; }
+.rwd-link { background:transparent; border:0; color:#2563eb; cursor:pointer; padding:6px 8px; border-radius:6px; font-weight:600; }
+.rwd-toast { position:fixed; right:20px; bottom:20px; background:linear-gradient(90deg,#111827,#2563eb); color:#fff; padding:10px 14px; border-radius:10px; box-shadow:0 6px 20px rgba(2,6,23,0.12); z-index:11000; font-weight:700; }
+
+
+
+/* ---- styles for slot machine ---- */
+.rwd-slot-wrapper { }
+.rwd-slot-btn { cursor:pointer; font-weight:700; padding:6px 8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:transparent; margin-left:6px; }
+.rwd-slot-panel { margin-top:10px; max-height:0; overflow:hidden; transition: max-height .28s ease, opacity .18s ease; opacity:0; background:linear-gradient(180deg,#fff,#fbfbff); border-radius:10px; padding:0 10px; box-shadow:0 8px 24px rgba(2,6,23,0.06); }
+.rwd-slot-panel.open { max-height:340px; opacity:1; padding:10px; }
+.rwd-slot-row { display:flex; justify-content:center; padding:8px 0; }
+.rwd-reels { display:flex; gap:10px; }
+.rwd-reel { width:58px; height:58px; border-radius:8px; background:linear-gradient(180deg,#fff,#f8fafc); display:flex; align-items:center; justify-content:center; font-size:28px; box-shadow:0 6px 16px rgba(2,6,23,0.06); border:1px solid #f3f4f6; }
+.rwd-slot-controls { display:flex; gap:8px; align-items:center; justify-content:space-between; padding:6px 0; }
+.rwd-slot-left label, .rwd-slot-center label { font-size:13px; color:#374151; }
+.rwd-slot-spin { background:#2563eb; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700; }
+.rwd-slot-msg { font-size:13px; color:#111827; opacity:0.8; padding-top:6px; min-height:18px; transition:opacity .2s ease; }
+.rwd-slot-footer { padding-top:6px; }
+
+
+
+/* layout for controls row (inventory + slot side-by-side) */
+.rwd-controls { display:flex; gap:8px; align-items:center; margin-top:8px; }
+.rwd-inv-wrapper, .rwd-slot-wrapper { display:inline-flex; align-items:center; }
+
+
+
+/* --- alignment fixes for action buttons --- */
+.rwd-controls { display:flex; gap:8px; align-items:center; justify-content:flex-start; margin-top:8px; flex-wrap:wrap; }
+.rwd-action-btn { 
+  display:inline-flex; 
+  align-items:center; 
+  justify-content:center; 
+  gap:8px;
+  min-height:36px; 
+  padding:6px 10px; 
+  border-radius:8px; 
+  border:1px solid rgba(0,0,0,0.06); 
+  background:transparent; 
+  font-weight:700; 
+  cursor:pointer;
+  box-sizing:border-box;
+  line-height:1;
+  white-space:nowrap;
+}
+.rwd-inv-wrapper, .rwd-slot-wrapper { display:inline-flex; align-items:center; }
+.rwd-inventory-panel, .rwd-slot-panel { margin-top:6px; width:100%; box-sizing:border-box; }
+/* ensure panels don't push buttons vertically */
+.progress-sidebar .rwd-controls + .rwd-inventory-panel,
+.progress-sidebar .rwd-controls + .rwd-slot-panel { margin-top:8px; }
+/* responsive: on very small screens stack buttons */
+@media (max-width:420px){
+  .rwd-controls { flex-direction:column; align-items:stretch; }
+  .rwd-action-btn { width:100%; justify-content:flex-start; padding-left:12px; }
+}
+
+
+
+/* unified action wrapper and button */
+.rwd-action { display:inline-flex; align-items:center; }
+.rwd-action-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:36px; padding:6px 12px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:transparent; font-weight:700; cursor:pointer; }
+.rwd-action-btn.rwd-inv-btn { /* specific tweaks for inventory if needed */ }
+.rwd-action-btn.rwd-slot-btn { /* specific tweaks for slot if needed */ margin-left:0; }
+
+
+
+
+/* Custom page background */
+
+
+
+/* Nav background updated by ChatGPT */
+nav, .navbar, #top-nav, .top-nav, .top-nav-left, header nav, nav.header-nav, .nav {
+  background-color: #F9F3EF !important;
+  color: inherit;
+}
+nav *[style*="background"], .navbar *[style*="background"] {
+  background-color: transparent !important; /* avoid nested elements overriding nav bg */
+}
+/* End nav update */
+
+
+/* ===== FORCE PAGE BACKGROUND (added by ChatGPT) =====
+   This block is intentionally placed at the end of the file and uses !important
+   and a fixed pseudo-element to ensure the page background shows through
+   even when child containers or overlays try to cover the full viewport.
+*/
+html, body {
+  background-color: #D2C1B6 !important;
+  height: 100% !important;
+  min-height: 100% !important;
+}
+
+/* A fixed pseudo-element behind everything to guarantee page background */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2147483648; /* extremely low to stay behind all content */
+  background-color: #D2C1B6 !important;
+  pointer-events: none;
+}
+
+/* Make sure no global rule is unintentionally applying white to the root */
+:root, html, body { background: none !important; }
+/* End FORCE PAGE BACKGROUND block */
+
+
+/* Main three containers override by ChatGPT: left sidebar, main content, right column */
+aside.sidebar, main.content, .right-column {
+  background-color: #F9F3EF !important;
+  color: inherit;
+}
+
+/* Also override if those elements have inline background styles (direct children) */
+body > aside.sidebar[style*="background"], body > main.content[style*="background"], body > .right-column[style*="background"],
+aside.sidebar[style*="background"], main.content[style*="background"], .right-column[style*="background"] {
+  background-color: #F9F3EF !important;
+}
+/* End main three containers override */
+
+
+/* Ajuste: Forçar fundo dos 2 containers à direita (um contém 'Progresso total') */
+.right-column > * {
+  background-color: #F9F3EF !important;
+}
+.right-column {
+  background-color: #F9F3EF !important;
+}
+
+
+/* Right-column gap + border-radius fix (added by ChatGPT) */
+.right-column {
+  background-color: transparent !important; /* allow page background to show between children */
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important; /* space between the two right containers */
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Ensure each child is an independent rounded card with its own background */
+.right-column > * {
+  background-color: #F9F3EF !important;
+  border-radius: 12px !important;
+  overflow: hidden !important; /* prevents child content from leaking outside rounded corners */
+  margin: 0 !important; /* remove margins so gap uses parent's gap */
+  box-shadow: 0 6px 16px rgba(2,6,23,0.06) !important;
+  border: 1px solid rgba(0,0,0,0.03) !important;
+  padding: 12px !important;
+}
+
+/* If children already have padding or internal structure, keep visual spacing consistent */
+.right-column > * .card, .right-column > * .panel {
+  background: transparent !important;
+}
+
+/* end of right-column fix */
+
+
+/* ===== Overrides: set add buttons to #D2C1B6 ===== */
+/* Nav: Add page button */
+.top-nav .pages-controls .nav-btn#btn-add-page {
+  background-color: #D2C1B6 !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+.top-nav .pages-controls .nav-btn#btn-add-page svg {
+  stroke: #ffffff !important;
+  fill: none !important;
+}
+
+/* Sidebar: Add list/button inside the top-row of the sidebar */
+.sidebar .top-row button,
+.add-list .top-row button,
+.top-row button#btn-add-list {
+  background-color: #456882 !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+
+
+
+/* ===== Right-column add-task button: match add buttons color (#456882) ===== */
+.right-column .add-task, .right-column .btn-add-task, .right-column .add-btn, .right-column button.add,
+.right-column button.btn-add, .right-column .task-add-button, .right-column .btn-add, 
+.right-column .rwd-action-btn.add, .right-column .rwd-action-btn.add-task, .right-column .rwd-action-btn,
+.progress-sidebar .rwd-action-btn, .progress-sidebar .btn-add, .progress-sidebar .add-task {
+  background-color: #D2C1B6 !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 6px 16px rgba(69,104,130,0.08) !important;
+}
+
+/* Ensure any SVG/icon inside the button is visible in white */
+.right-column .add-task svg, .right-column .btn-add-task svg, .right-column button.add svg,
+.progress-sidebar .rwd-action-btn svg {
+  stroke: #ffffff !important;
+  fill: none !important;
+}
+
+
+/* ===== Button hover color: use #1B3C53 for all add buttons ===== */
+.top-nav .pages-controls .nav-btn#btn-add-page:hover,
+.sidebar .top-row button:hover,
+.add-list .top-row button:hover,
+.top-row button#btn-add-list:hover,
+.right-column .add-task:hover,
+.right-column .btn-add-task:hover,
+.right-column .add-btn:hover,
+.right-column button.add:hover,
+.right-column button.btn-add:hover,
+.right-column .task-add-button:hover,
+.right-column .btn-add:hover,
+.right-column .rwd-action-btn.add:hover,
+.right-column .rwd-action-btn.add-task:hover,
+.right-column .rwd-action-btn:hover,
+.progress-sidebar .rwd-action-btn:hover,
+.progress-sidebar .btn-add:hover,
+.progress-sidebar .add-task:hover {
+  background-color: #1B3C53 !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  transform: translateY(-1px) !important;
+  transition: background-color .12s ease, transform .12s ease !important;
+  filter: none !important;
+  box-shadow: 0 8px 20px rgba(27,60,83,0.12) !important;
+}
+
+/* Ensure icons inside hover remain white/visible */
+.top-nav .pages-controls .nav-btn#btn-add-page:hover svg,
+.right-column .add-task:hover svg,
+.progress-sidebar .rwd-action-btn:hover svg,
+.sidebar .top-row button:hover svg {
+  stroke: #ffffff !important;
+  fill: none !important;
+}
+/* ===== End button hover color block ===== */
+
+
+/* Nav delete/edit hover block (added by ChatGPT) */
+/* Apply the same hover effects used for add-buttons, but with background color #D2C1B6
+   and dark icon/text for adequate contrast. */
+.top-nav .pages-controls .nav-btn#btn-delete-page,
+.top-nav .pages-controls .nav-btn#btn-edit-title,
+nav #btn-delete-page, nav #btn-edit-title,
+.top-nav .btn-delete-page, .top-nav .btn-edit-title,
+.nav-btn.delete, .nav-btn.edit, .top-nav .nav-action.delete, .top-nav .nav-action.edit,
+nav .btn-delete, nav .btn-edit {
+  transition: background-color .12s ease, transform .12s ease !important;
+  border-color: transparent !important;
+  color: #0b1720 !important; /* dark text/icon color for contrast */
+}
+
+.top-nav .pages-controls .nav-btn#btn-delete-page:hover,
+.top-nav .pages-controls .nav-btn#btn-edit-title:hover,
+nav #btn-delete-page:hover, nav #btn-edit-title:hover,
+.top-nav .btn-delete-page:hover, .top-nav .btn-edit-title:hover,
+.nav-btn.delete:hover, .nav-btn.edit:hover, nav .btn-delete:hover, nav .btn-edit:hover {
+  background-color: #D2C1B6 !important;
+  color: #0b1720 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 8px 20px rgba(11,23,32,0.06) !important;
+  filter: none !important;
+}
+
+/* Ensure SVG/icon coloring is dark on hover */
+.top-nav .pages-controls .nav-btn#btn-delete-page:hover svg,
+.top-nav .pages-controls .nav-btn#btn-edit-title:hover svg,
+nav #btn-delete-page:hover svg, nav #btn-edit-title:hover svg,
+nav .btn-delete:hover svg, nav .btn-edit:hover svg {
+  stroke: #0b1720 !important;
+  fill: none !important;
+}
+/* End of nav delete/edit hover block */
+
+
+/* ===== Strong override: right-column buttons use #D2C1B6 ===== */
+body .right-column .add-task, body .right-column .btn-add-task, body .right-column .add-btn,
+body .right-column button.add, body .right-column button.btn-add, body .right-column .task-add-button,
+body .right-column .btn-add, body .right-column .rwd-action-btn, body .right-column .rwd-action-btn.add {
+  background: #D2C1B6 !important;
+  background-color: #D2C1B6 !important;
+  color: #0b1720 !important;
+  border-color: transparent !important;
+  box-shadow: 0 6px 16px rgba(11,23,32,0.04) !important;
+}
+/* Ensure SVG/icon coloring matches dark stroke */
+body .right-column .add-task svg, body .right-column .btn-add-task svg, body .right-column button.add svg,
+body .right-column .rwd-action-btn svg {
+  stroke: #0b1720 !important;
+  fill: none !important;
+}
+/* End strong override */
+
+/* ===== Ensure nav add-page button is #456882 (added by ChatGPT) ===== */
+/* ===== Ensure nav add-page button is #456882 (added by ChatGPT) ===== */
+body nav .pages-controls .nav-btn#btn-add-page,
+body .top-nav .pages-controls .nav-btn#btn-add-page,
+nav #btn-add-page, .top-nav #btn-add-page, .nav-btn#btn-add-page,
+.top-nav .btn-add-page, .top-nav .pages-controls button.add-page {
+  background-color: #456882 !important;
+  background: #456882 !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 6px 16px rgba(69,104,130,0.08) !important;
+}
+
+/* Make sure icon strokes are white for visibility */
+body nav .pages-controls .nav-btn#btn-add-page svg,
+body .top-nav .pages-controls .nav-btn#btn-add-page svg,
+nav #btn-add-page svg, .top-nav #btn-add-page svg {
+  stroke: #ffffff !important;
+  fill: none !important;
+}
+/* Ensure hover stays slightly darker (existing hover block uses #1B3C53) */
+/* ===== End ensure nav add-page block ===== */
+
+/* ===== Nav-wide hover effects (added by ChatGPT) ===== */
+
+/* ===== Nav-wide hover effects (added by ChatGPT) =====
+   Apply the same hover visual (used by add-buttons) to all nav buttons,
+   but exclude buttons that intentionally have different hover styles
+   (e.g. delete/edit which use #D2C1B6).
+*/
+nav .nav-btn:not(.delete):not(.edit):not(#btn-delete-page):not(#btn-edit-title):hover,
+.top-nav .nav-btn:not(.delete):not(.edit):not(#btn-delete-page):not(#btn-edit-title):hover,
+nav button:not(.delete):not(.edit):not(#btn-delete-page):not(#btn-edit-title):hover,
+.top-nav button:not(.delete):not(.edit):not(#btn-delete-page):not(#btn-edit-title):hover,
+nav .btn:not(.delete):not(.edit):not(#btn-delete-page):not(#btn-edit-title):hover,
+.top-nav .btn:not(.delete):not(.edit):not(#btn-delete-page):not(#btn-edit-title):hover,
+nav a.button:not(.delete):not(.edit):hover,
+.top-nav a.button:not(.delete):not(.edit):hover {
+  background-color: #1B3C53 !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  transform: translateY(-1px) !important;
+  transition: background-color .12s ease, transform .12s ease !important;
+  filter: none !important;
+  box-shadow: 0 8px 20px rgba(27,60,83,0.12) !important;
+}
+
+/* Ensure icons inside hovered nav-buttons remain white/visible */
+nav .nav-btn:hover svg, .top-nav .nav-btn:hover svg,
+nav button:hover svg, .top-nav button:hover svg,
+nav .btn:hover svg, .top-nav .btn:hover svg,
+nav a.button:hover svg, .top-nav a.button:hover svg {
+  stroke: #ffffff !important;
+  fill: none !important;
+}
+
+/* ===== End nav-wide hover effects ===== */
+
+/* ===== btn-add-task color override (added by ChatGPT) ===== */
+/* ===== btn-add-task color override (added by ChatGPT) ===== */
+#btn-add-task, .btn-add-task, button.btn-add-task, .btn-add-task.btn, .right-column #btn-add-task {
+  background-color: #456882 !important;
+  background: #456882 !important;
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 6px 16px rgba(69,104,130,0.08) !important;
+}
+
+/* Ensure icons inside remain white */
+#btn-add-task svg, .btn-add-task svg, button.btn-add-task svg {
+  stroke: #ffffff !important;
+  fill: none !important;
+}
+
+/* Keep hover (if you want a different hover for this specific button, it's controlled by the global nav hover block) */
+/* ===== End btn-add-task override ===== */
