@@ -19,7 +19,7 @@
     { code: 'gato_bombay', name: 'Gato Bombay', emoji: '🐱' },
     { code: 'gato_cinza', name: 'Gato Cinza', emoji: '🐱' },
     { code: 'gato_laranja', name: 'Gato Laranja', emoji: '🐱' },
-    { code: 'golden', name: 'Golden', emoji: '🐕' },
+    { code: 'retriever', name: 'Retriever', emoji: '🐕' },
     { code: 'hamster', name: 'Hamster', emoji: '🐹' },
     { code: 'husky', name: 'Husky', emoji: '🐺' },
     { code: 'macaco', name: 'Macaco', emoji: '🐵' },

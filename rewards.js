@@ -24,7 +24,7 @@
     { id: 'moeda_gato_bombay', name: 'Moeda Gato Bombay', emoji: '💎', desc: 'Uma moeda colecionável com tema Gato Bombay.' },
     { id: 'moeda_gato_cinza', name: 'Moeda Gato Cinza', emoji: '💎', desc: 'Uma moeda colecionável com tema Gato Cinza.' },
     { id: 'moeda_gato_laranja', name: 'Moeda Gato Laranja', emoji: '💎', desc: 'Uma moeda colecionável com tema Gato Laranja.' },
-    { id: 'moeda_golden', name: 'Moeda Golden', emoji: '💎', desc: 'Uma moeda colecionável com tema Golden.' },
+    { id: 'moeda_retriever', name: 'Moeda Retriever', emoji: '💎', desc: 'Uma moeda colecionável com tema Retriever.' },
     { id: 'moeda_hamster', name: 'Moeda Hamster', emoji: '💎', desc: 'Uma moeda colecionável com tema Hamster.' },
     { id: 'moeda_husky', name: 'Moeda Husky', emoji: '💎', desc: 'Uma moeda colecionável com tema Husky.' },
     { id: 'moeda_macaco', name: 'Moeda Macaco', emoji: '💎', desc: 'Uma moeda colecionável com tema Macaco.' },
