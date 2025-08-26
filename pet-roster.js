@@ -1,9 +1,6 @@
-
-/* pet-roster.js
-   Painel "Gabarito de Pets" — cria um botão ao lado de "Missões" que abre um painel
-   mostrando quais pets o usuário já possui (hatched / ovos / moedas) e quais faltam.
-   - Atualiza automaticamente quando o inventário (localStorage 'mini_todo_inventory_v1') muda.
-   - Usa classes já existentes (.rwd-action, .rwd-action-btn, .rwd-controls) para se integrar ao estilo.
+/* pet-roster.js — CORRIGIDO
+   Ajuste final: o gabarito considera apenas pets chocados (code === petCode)
+   ou itens cujo NOME seja exatamente igual ao nome do pet.
 */
 
 (function(document, window){
@@ -38,47 +35,46 @@
     return safeJSONParse(localStorage.getItem(LS_INVENTORY), []) || [];
   }
 
+  // Normaliza strings para comparação (minusculas, espaços, replace de '_' e '-')
   function normalize(s){ return String(s||'').toLowerCase().replace(/[\s\-_]+/g,' ').trim(); }
 
-  // Decide se um inventário contém o pet (hatched) ou moeda correspondente
+  // --- Matching restrito: apenas pets chocados (code === petCode) ou item com NOME exatamente igual ao pet ---
   function inventoryHasPet(inv, petCode, petName){
+    // Agora *apenas* pets chocados (code === petCode) ou itens cujo NOME seja exatamente o mesmo
     if (!Array.isArray(inv)) return false;
     petCode = String(petCode||'').toLowerCase();
-    petName = String(petName||'').toLowerCase();
+    var normPetName = normalize(petName||'');
+
     for (var i=0;i<inv.length;i++){
       var it = inv[i];
       if (!it) continue;
       var code = String(it.code || '').toLowerCase();
-      var name = String(it.name || '').toLowerCase();
-      // cases:
-      // - hatched pet: code === petCode
+      var name = normalize(it.name || '');
+
+      // Considera possession apenas quando:
+      //  - item chocado: code === petCode
       if (code === petCode) return true;
-      // - egg for that pet: code === 'ovo_'+petCode
-      if (code === ('ovo_' + petCode)) return true;
-      // - coin: code === 'moeda_'+petCode or contains petName in name
-      if (/^moeda[_\-]/.test(code) && code.indexOf(petCode) !== -1) return true;
-      if (name && (name.indexOf(petName) !== -1 || name.indexOf(petCode) !== -1)) return true;
-      // - for some legacy items names might include the pet name without prefix:
-      if (name && normalize(name).indexOf(normalize(petName)) !== -1) return true;
+      //  - ou quando o nome do item for exatamente o nome do pet (após normalização)
+      if (name && (name === normPetName || name === petCode)) return true;
     }
     return false;
   }
 
-  // Count matches (how many items relate to that pet)
+  // Contabiliza somente items que representam efetivamente o pet chocado ou item com nome igual
   function inventoryCountForPet(inv, petCode, petName){
     if (!Array.isArray(inv)) return 0;
     var count = 0;
     petCode = String(petCode||'').toLowerCase();
-    petName = String(petName||'').toLowerCase();
+    var normPetName = normalize(petName||'');
+
     for (var i=0;i<inv.length;i++){
       var it = inv[i];
       if (!it) continue;
       var code = String(it.code || '').toLowerCase();
-      var name = String(it.name || '').toLowerCase();
+      var name = normalize(it.name || '');
+
       if (code === petCode) count++;
-      else if (code === ('ovo_' + petCode)) count++;
-      else if (/^moeda[_\-]/.test(code) && code.indexOf(petCode) !== -1) count++;
-      else if (name && (name.indexOf(petName) !== -1 || name.indexOf(petCode) !== -1)) count++;
+      else if (name && (name === normPetName || name === petCode)) count++;
     }
     return count;
   }
@@ -202,33 +198,29 @@
       btn.addEventListener('click', function(){
         var p = sidebar.querySelector('#rwd-pets-panel');
         if (!p){
-          // create panel if absent and RENDER de imediato
           var panel = buildPanel();
           sidebar.appendChild(panel);
-          panel.classList.add('open'); // abre já expandido na primeira vez
+          panel.classList.add('open');
           renderPanel();
         } else {
           p.classList.toggle('open');
           if (p.classList.contains('open')) {
-            renderPanel(); // garante que o conteúdo aparece ao abrir
+            renderPanel();
           }
         }
       });
       actionWrap.appendChild(btn);
-      // prefer inserir depois do botão de missões se existir
       var missionsBtn = controls.querySelector('#rwd-missions-toggle');
       if (missionsBtn && missionsBtn.parentNode) missionsBtn.parentNode.parentNode.insertBefore(actionWrap, missionsBtn.parentNode.nextSibling);
       else controls.appendChild(actionWrap);
     }
 
-    // ensure panel exists (but keep closed by default)
     if (!sidebar.querySelector('#rwd-pets-panel')){
       var panel = buildPanel();
       panel.classList.remove('open');
       panel.style.maxHeight = '0';
       panel.style.overflow = 'hidden';
       panel.style.transition = 'max-height .28s ease, opacity .16s ease, padding .16s ease';
-      // open/close styling toggle via class 'open'
       var observer = new MutationObserver(function(muts){
         var p = sidebar.querySelector('#rwd-pets-panel');
         if (!p) return;
@@ -244,7 +236,6 @@
       });
       observer.observe(sidebar, { childList: true, subtree: true, attributes: true });
       sidebar.appendChild(panel);
-      // render once so a lista não fica vazia se alguém abrir via CSS
       renderPanel();
     }
     return true;
@@ -254,17 +245,14 @@
   function init(){
     try {
       ensurePetsUI();
-      // render when inventory changes
       document.addEventListener('mini_todo_inventory_changed', function(){ renderPanel(); });
       window.addEventListener('storage', function(e){ if (e.key === LS_INVENTORY) renderPanel(); });
-      // also update when mission panel created (some load order cases)
       document.addEventListener('mini_todo_missions_changed', function(){ renderPanel(); });
     } catch(e){ console.error('pet-roster init error', e); }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 
-  // expose for debug
   window.petRoster = {
     render: renderPanel,
     buildPanel: buildPanel,
