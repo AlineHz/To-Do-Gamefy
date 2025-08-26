@@ -1068,10 +1068,10 @@ function attemptHatchEgg(){
         function titleCase(s){ return s.split(/\s+/).map(function(w){ return w.charAt(0).toUpperCase()+w.slice(1); }).join(' '); }
         var candidates = [];
         if (baseForFile) {
-          candidates.push('Assets/' + titleCase(baseForFile) + '.png');       // "Gato Angora.png" or "Bulldog.png"
-          candidates.push('Assets/' + baseForFile + '.png');                 // "gato angora.png"
-          candidates.push('Assets/' + baseForFile.replace(/\s+/g,'_') + '.png'); // "gato_angora.png"
-          candidates.push('Assets/' + baseForFile.replace(/\s+/g,'') + '.png');  // "gatoangora.png"
+          candidates.push('/assets/' + titleCase(baseForFile) + '.png');       // "Gato Angora.png" or "Bulldog.png"
+          candidates.push('/assets/' + baseForFile + '.png');                 // "gato angora.png"
+          candidates.push('/assets/' + baseForFile.replace(/\s+/g,'_') + '.png'); // "gato_angora.png"
+          candidates.push('/assets/' + baseForFile.replace(/\s+/g,'') + '.png');  // "gatoangora.png"
         }
         // always keep a final fallback to an inline SVG (emoji)
         var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">' +
