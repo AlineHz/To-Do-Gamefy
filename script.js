@@ -332,12 +332,21 @@ function computeOverallProgressCurrentPage() {
     var lists = pg.lists || [];
     var total = 0, done = 0;
     // For progress we will IGNORE tasks from repeating lists that are planned (i.e., not available today).
-    // However, lists that are one-off (repeat === 'once') or repeating lists available today are counted.
+    // However, if a repeating list is *completed* and scheduled for the future it contains a history entry
+    // (a task flagged with _isHistory). In that case we should count only those history records so the
+    // global progress reflects that the occurrence was completed.
     for (var i = 0; i < lists.length; i++) {
       var l = lists[i];
       try {
-        // If the list is a repeating list and is planned for the future, skip its tasks.
+        // If the list is a repeating list and is planned for the future...
         if (l.repeat && l.repeat !== 'once' && isPlannedFuture(l)) {
+          // ...and it has history tasks (from previous completion), count only those history tasks.
+          var htasks = (l.tasks || []).filter(function(t){ return !!t._isHistory; });
+          for (var h = 0; h < htasks.length; h++) {
+            total += 1;
+            if (htasks[h].done) done += 1;
+          }
+          // otherwise (no history tasks) this planned list contributes nothing to today's progress.
           continue;
         }
       } catch (e) {}

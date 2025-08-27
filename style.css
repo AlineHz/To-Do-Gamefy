@@ -1064,8 +1064,6 @@ body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#f4f6f8;color
   color: #6b7280;
 }
 
-
-
 /* ---- styles for rewards inventory ---- */
 .rwd-inv-wrapper { }
 .rwd-inv-btn { cursor:pointer; font-weight:700; padding:6px 8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:transparent; }
@@ -1130,8 +1128,6 @@ body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#f4f6f8;color
 .rwd-link { background:transparent; border:0; color:#2563eb; cursor:pointer; padding:6px 8px; border-radius:6px; font-weight:600; }
 .rwd-toast { position:fixed; right:20px; bottom:20px; background:linear-gradient(90deg,#111827,#2563eb); color:#fff; padding:10px 14px; border-radius:10px; box-shadow:0 6px 20px rgba(2,6,23,0.12); z-index:11000; font-weight:700; }
 
-
-
 /* ---- styles for slot machine ---- */
 .rwd-slot-wrapper { }
 .rwd-slot-btn { cursor:pointer; font-weight:700; padding:6px 8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:transparent; margin-left:6px; }
@@ -1142,17 +1138,13 @@ body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#f4f6f8;color
 .rwd-reel { width:58px; height:58px; border-radius:8px; background:linear-gradient(180deg,#fff,#f8fafc); display:flex; align-items:center; justify-content:center; font-size:28px; box-shadow:0 6px 16px rgba(2,6,23,0.06); border:1px solid #f3f4f6; }
 .rwd-slot-controls { display:flex; gap:8px; align-items:center; justify-content:space-between; padding:6px 0; }
 .rwd-slot-left label, .rwd-slot-center label { font-size:13px; color:#374151; }
-.rwd-slot-spin { background:#2563eb; color:#fff; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700; }
+
 .rwd-slot-msg { font-size:13px; color:#111827; opacity:0.8; padding-top:6px; min-height:18px; transition:opacity .2s ease; }
 .rwd-slot-footer { padding-top:6px; }
-
-
 
 /* layout for controls row (inventory + slot side-by-side) */
 .rwd-controls { display:flex; gap:8px; align-items:center; margin-top:8px; }
 .rwd-inv-wrapper, .rwd-slot-wrapper { display:inline-flex; align-items:center; }
-
-
 
 /* --- alignment fixes for action buttons --- */
 .rwd-controls { display:flex; gap:8px; align-items:center; justify-content:flex-start; margin-top:8px; flex-wrap:wrap; }
@@ -1183,20 +1175,13 @@ body{font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;background:#f4f6f8;color
   .rwd-action-btn { width:100%; justify-content:flex-start; padding-left:12px; }
 }
 
-
-
 /* unified action wrapper and button */
 .rwd-action { display:inline-flex; align-items:center; }
 .rwd-action-btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:36px; padding:6px 12px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:transparent; font-weight:700; cursor:pointer; }
 .rwd-action-btn.rwd-inv-btn { /* specific tweaks for inventory if needed */ }
 .rwd-action-btn.rwd-slot-btn { /* specific tweaks for slot if needed */ margin-left:0; }
 
-
-
-
 /* Custom page background */
-
-
 
 /* Nav background updated by ChatGPT */
 nav, .navbar, #top-nav, .top-nav, .top-nav-left, header nav, nav.header-nav, .nav {
@@ -1207,7 +1192,6 @@ nav *[style*="background"], .navbar *[style*="background"] {
   background-color: transparent !important; /* avoid nested elements overriding nav bg */
 }
 /* End nav update */
-
 
 /* ===== FORCE PAGE BACKGROUND (added by ChatGPT) =====
    This block is intentionally placed at the end of the file and uses !important
@@ -1234,7 +1218,6 @@ body::before {
 :root, html, body { background: none !important; }
 /* End FORCE PAGE BACKGROUND block */
 
-
 /* Main three containers override by ChatGPT: left sidebar, main content, right column */
 aside.sidebar, main.content, .right-column {
   background-color: #F9F3EF !important;
@@ -1248,7 +1231,6 @@ aside.sidebar[style*="background"], main.content[style*="background"], .right-co
 }
 /* End main three containers override */
 
-
 /* Ajuste: Forçar fundo dos 2 containers à direita (um contém 'Progresso total') */
 .right-column > * {
   background-color: #F9F3EF !important;
@@ -1256,7 +1238,6 @@ aside.sidebar[style*="background"], main.content[style*="background"], .right-co
 .right-column {
   background-color: #F9F3EF !important;
 }
-
 
 /* Right-column gap + border-radius fix (added by ChatGPT) */
 .right-column {
@@ -1286,7 +1267,6 @@ aside.sidebar[style*="background"], main.content[style*="background"], .right-co
 
 /* end of right-column fix */
 
-
 /* ===== Overrides: set add buttons to #D2C1B6 ===== */
 /* Nav: Add page button */
 .top-nav .pages-controls .nav-btn#btn-add-page {
@@ -1308,9 +1288,6 @@ aside.sidebar[style*="background"], main.content[style*="background"], .right-co
   border: none !important;
 }
 
-
-
-
 /* ===== Right-column add-task button: match add buttons color (#456882) ===== */
 .right-column .add-task, .right-column .btn-add-task, .right-column .add-btn, .right-column button.add,
 .right-column button.btn-add, .right-column .task-add-button, .right-column .btn-add, 
@@ -1328,7 +1305,6 @@ aside.sidebar[style*="background"], main.content[style*="background"], .right-co
   stroke: #ffffff !important;
   fill: none !important;
 }
-
 
 /* ===== Button hover color: use #1B3C53 for all add buttons ===== */
 .top-nav .pages-controls .nav-btn#btn-add-page:hover,
@@ -1367,7 +1343,6 @@ aside.sidebar[style*="background"], main.content[style*="background"], .right-co
 }
 /* ===== End button hover color block ===== */
 
-
 /* Nav delete/edit hover block (added by ChatGPT) */
 /* Apply the same hover effects used for add-buttons, but with background color #D2C1B6
    and dark icon/text for adequate contrast. */
@@ -1403,7 +1378,6 @@ nav .btn-delete:hover svg, nav .btn-edit:hover svg {
   fill: none !important;
 }
 /* End of nav delete/edit hover block */
-
 
 /* ===== Strong override: right-column buttons use #D2C1B6 ===== */
 body .right-column .add-task, body .right-column .btn-add-task, body .right-column .add-btn,
@@ -1498,4 +1472,79 @@ nav a.button:hover svg, .top-nav a.button:hover svg {
 }
 
 /* Keep hover (if you want a different hover for this specific button, it's controlled by the global nav hover block) */
-/* ===== End btn-add-task override ===== */
+/* ===== End btn-add-task override ===== */\n
+
+/* --- Adjust: make sidebar view-tabs hover match the sidebar "Adicionar" button hover --- */
+.view-tabs .tab:hover,
+.view-tabs .tab:focus {
+  background-color: #1B3C53 !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  transform: translateY(-1px) !important;
+  transition: background-color .12s ease, transform .12s ease !important;
+  box-shadow: 0 8px 20px rgba(27,60,83,0.12) !important;
+}
+
+
+
+/* --- Sidebar specific tabs hover: make sure Ativas/Planejados/Concluídas match the Adicionar button hover --- */
+#tab-active:hover,
+#tab-planned:hover,
+#tab-completed:hover,
+#tab-active:focus,
+#tab-planned:focus,
+#tab-completed:focus {
+  background-color: #1B3C53 !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  transform: translateY(-1px) !important;
+  transition: background-color .12s ease, transform .12s ease !important;
+  filter: none !important;
+  box-shadow: 0 8px 20px rgba(27,60,83,0.12) !important;
+}
+
+
+
+/* --- Ajuste: cor do botão 
+
+/* Hover/focus: apenas muda a cor de fundo para #1B3C53; sem transformação nem sombra */
+
+
+/* Ícone SVG dentro do botão */
+
+
+/* --- .rwd-slot-spin: maior e cantos arredondados --- */
+.rwd-slot-spin {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 12px 18px !important;      /* maior espaço interno */
+  min-width: 56px !important;
+  height: 44px !important;            /* altura maior */
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  border-radius: 12px !important;     /* cantos arredondados */
+  background-color: #456882 !important;
+  color: #ffffff !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+  box-shadow: none !important;        /* sem sombra extra */
+  transform: none !important;
+}
+
+/* Hover apenas altera a cor, mantém a mesma forma (sem elevação) */
+.rwd-slot-spin:hover,
+.rwd-slot-spin:focus {
+  background-color: #1B3C53 !important;
+  outline: none !important;
+}
+
+/* Ícone dentro do botão alinhado e visível */
+.rwd-slot-spin svg {
+  width: 18px !important;
+  height: 18px !important;
+  stroke: #ffffff !important;
+  fill: none !important;
+}
