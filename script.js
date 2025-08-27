@@ -423,35 +423,35 @@ function computeNextOccurrence(list) {
   }
 
   
+
 function isPlannedFuture(list) {
-    // Compare using local Y/M/D components to avoid timezone shifts that make
-    // an availableOn ISO string appear as the next day in some timezones.
-    function dateYMD(d) {
-      if (!d) return null;
-      var D = new Date(d);
-      return [D.getFullYear(), D.getMonth(), D.getDate()];
-    }
-    var todayD = dateYMD(startOfDay());
-    var availD = list.availableOn ? dateYMD(list.availableOn) : null;
-    if (availD) {
-      // if availableOn is strictly after today (by date), it's planned
-      for (var i=0;i<3;i++) {
-        if (availD[i] > todayD[i]) return true;
-        if (availD[i] < todayD[i]) return false;
-      }
-      // equal dates -> not planned
-      return false;
-    }
-    // otherwise compute next occurrence based on repeat rules (tomorrow+)
-    var next = computeNextOccurrence(list);
-    if (!next) return false;
-    var nextD = dateYMD(next);
-    for (var j=0;j<3;j++) {
-      if (nextD[j] > todayD[j]) return true;
-      if (nextD[j] < todayD[j]) return false;
-    }
+  // determina se a lista é 'planejada' — ou seja, tem próxima ocorrência NO FUTURO (após hoje)
+  var today = startOfDay();
+  var avail = list.availableOn ? startOfDay(new Date(list.availableOn)) : null;
+
+  // one-time lists: planned if availableOn is in the future
+  if (list.repeat === 'once') {
+    if (avail && avail > today) return true;
     return false;
   }
+
+  // repeating lists:
+  // if the list is available today (segundo regras de repetição), então NÃO é planejada
+  if (isAvailableToday(list)) return false;
+
+  // if availableOn exists and is in the future, it's planned
+  if (avail && avail > today) return true;
+
+  // otherwise compute the next occurrence after today; if it's > today, it's planned
+  try {
+    var next = computeNextOccurrence(list);
+    if (next && startOfDay(next) > today) return true;
+  } catch (e) {}
+
+  return false;
+}
+
+
 
 
 
@@ -691,7 +691,7 @@ function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; sav
     } else {
       (list.tasks || []).forEach(function(task){
         var t = document.createElement('div'); t.className = 'task' + (task.done ? ' done' : '');
-        var cb = document.createElement('input'); cb.type='checkbox'; cb.checked = !!task.done; cb.disabled = true;
+        var cb = document.createElement('input'); cb.type='checkbox'; cb.checked = !!task.done; cb.disabled = (list.repeat !== 'once'); cb.addEventListener('change', function(){ if(cb.disabled) return; toggleTask(list.id, task.id); });
         var text = document.createElement('div'); text.className='text'; text.textContent = task.text;
         t.appendChild(cb); t.appendChild(text); tasksContainer.appendChild(t);
       });
@@ -717,7 +717,7 @@ function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; sav
   function updateFooter(list, planned) {
     var remaining = (list.tasks || []).filter(function(t){ return !t.done; }).length;
     remainingEl.textContent = planned ? 'Agendada — ficará disponível na data indicada' : (remaining === 0 ? 'Nenhuma tarefa restante' : remaining + ' tarefa(s) restante(s)');
-    btnConfirm.disabled = planned || !((list.tasks || []).length && (list.tasks || []).every(function(t){ return t.done; }) && !list.completed);
+    btnConfirm.disabled = (planned && list.repeat !== 'once') || !((list.tasks || []).length && (list.tasks || []).every(function(t){ return t.done; }) && !list.completed);
   }
 
   // actions adapted to current page
