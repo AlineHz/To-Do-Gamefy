@@ -484,6 +484,19 @@ function isPlannedFuture(list) {
 
 
 
+function isOverdue(list) {
+  // Uma lista é considerada atrasada se sua availableOn estiver no passado (strictamente antes de hoje)
+  // e existir pelo menos uma tarefa não concluída (ignorando registros históricos _isHistory),
+  // e a lista não estiver marcada como completa.
+  try {
+    var today = startOfDay();
+    var avail = list.availableOn ? startOfDay(new Date(list.availableOn)) : null;
+    if (!avail) return false;
+    var hasPending = (list.tasks || []).some(function(t){ return !t.done && !t._isHistory; });
+    return avail < today && hasPending && !list.completed;
+  } catch (e) { return false; }
+}
+
 
   // ----------------------
   // LEVEL / XP FUNCTIONS
@@ -699,7 +712,7 @@ mdContainer.appendChild(inputMonthDay);
       var rd = (typeof list.repeatDay === 'number' && !isNaN(list.repeatDay)) ? list.repeatDay : (new Date(list.availableOn)).getDate();
       daysText = ' • dia ' + rd;
     }
-    left.innerHTML = '<div style="font-weight:600">' + escapeHtml(list.title) + ' ' + repeatBadge + (list.originId ? ' • (Planejado)' : '') + daysText + '</div>' +
+    left.innerHTML = '<div style="font-weight:600">' + escapeHtml(list.title) + ' ' + repeatBadge + (isOverdue(list) ? ' • (Atrasada)' : (list.originId ? ' • (Planejado)' : '')) + daysText + '</div>' +
                      '<div class="list-meta">' + (list.tasks ? list.tasks.length : 0) + ' tarefas ' + (list.completed ? '• concluída' : '') + '</div>' +
                      '<div class="progress small"><div class="progress-bar" style="width:' + percent + '%"></div><div class="progress-percent">' + percent + '%</div></div>';
     var right = document.createElement('div'); right.style.display='flex'; right.style.alignItems='center'; right.style.gap='8px';
@@ -765,11 +778,13 @@ function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; sav
     emptyStateEl.style.display='none';
     listAreaEl.style.display='flex';
     var planned = isPlannedFuture(list);
-    var availText = planned ? ' • Disponível em ' + (new Date(list.availableOn)).toLocaleDateString('pt-BR') : '';
+    var overdue = isOverdue(list);
+    if (overdue) planned = false; // overdue occurrences must be actionable
+    var availText = planned ? ' • Disponível em ' + (new Date(list.availableOn)).toLocaleDateString('pt-BR') : (overdue ? ' • ATRASADA desde ' + (new Date(list.availableOn)).toLocaleDateString('pt-BR') : '');
     if (selectedListTitleEl) selectedListTitleEl.textContent = list.title + (list.completed ? ' (Concluída)' : '');
     listStatsEl.textContent = (list.completed ? 'Concluída em ' + (list.completedAt ? new Date(list.completedAt).toLocaleString() : '') : ((list.tasks || []).length + ' tarefas')) + availText;
 
-    tasksContainer.innerHTML = '';
+    tasksContainer.innerHTML = ''
     if (!planned) {
       var pending = (list.tasks || []).filter(function(t){ return !t.done; });
       if (!pending.length) {
@@ -790,12 +805,12 @@ function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; sav
     } else {
       (list.tasks || []).forEach(function(task){
         var t = document.createElement('div'); t.className = 'task' + (task.done ? ' done' : '');
-        var cb = document.createElement('input'); cb.type='checkbox'; cb.checked = !!task.done; cb.disabled = (list.repeat !== 'once'); cb.addEventListener('change', function(){ if(cb.disabled) return; toggleTask(list.id, task.id); });
+        var cb = document.createElement('input'); cb.type='checkbox'; cb.checked = !!task.done; cb.disabled = (list.repeat !== 'once' && !overdue); cb.addEventListener('change', function(){ if(cb.disabled) return; toggleTask(list.id, task.id); });
         var text = document.createElement('div'); text.className='text'; text.textContent = task.text;
         t.appendChild(cb); t.appendChild(text); tasksContainer.appendChild(t);
       });
     }
-    updateFooter(list, planned);
+    updateFooter(list, planned, overdue);
     updateGlobalProgress();
   }
 
@@ -813,10 +828,11 @@ function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; sav
     lastOverallPercent = percent;
   }
 
-  function updateFooter(list, planned) {
+  function updateFooter(list, planned, overdue) {
     var remaining = (list.tasks || []).filter(function(t){ return !t.done; }).length;
     remainingEl.textContent = planned ? 'Agendada — ficará disponível na data indicada' : (remaining === 0 ? 'Nenhuma tarefa restante' : remaining + ' tarefa(s) restante(s)');
-    btnConfirm.disabled = (planned && list.repeat !== 'once') || !((list.tasks || []).length && (list.tasks || []).every(function(t){ return t.done; }) && !list.completed);
+    // permitir confirmação quando for uma ocorrência atrasada (overdue) mesmo para listas repetitivas
+    btnConfirm.disabled = ((planned && list.repeat !== 'once' && !overdue) || !((list.tasks || []).length && (list.tasks || []).every(function(t){ return t.done; }) && !list.completed));
   }
 
   // actions adapted to current page
