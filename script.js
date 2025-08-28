@@ -174,24 +174,41 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function normalizeList(l) {
-    const todayISO = startOfDay().toISOString();
+  
+function normalizeList(l) {
+  const todayISO = startOfDay().toISOString();
+
+  // mapear tarefas preservando _isHistory e garantindo done=true para itens "Concluído em ..."
+  var mappedTasks = (l.tasks || []).map(function (t) {
+    var text = (t && typeof t.text !== 'undefined') ? String(t.text) : '';
+    // detectar histórico por flag ou por prefixo textual (compatibilidade retroativa)
+    var isHistory = !!(t && (t._isHistory || (/^Concluído em /i).test(text)));
     return {
-      id: l.id || uid(),
-      title: l.title || 'Sem título',
-      tasks: (l.tasks || []).map(function (t) { return { id: t.id || uid(), text: t.text || '', done: !!t.done }; }),
-      completed: !!l.completed,
-      completedAt: l.completedAt || null,
-      repeat: l.repeat || 'once',
-      createdAt: l.createdAt || new Date().toISOString(),
-      availableOn: l.availableOn || todayISO,
-      originId: l.originId || null,
-      repeatDays: Array.isArray(l.repeatDays) ? l.repeatDays.slice() : [],
-      repeatDay: (typeof l.repeatDay === 'number') ? l.repeatDay : (l.repeatDay ? Number(l.repeatDay) : null),
-      pointsAwarded: typeof l.pointsAwarded === 'number' ? l.pointsAwarded : ((l.tasks || []).filter(function(t){return t.done}).length * POINTS_PER_TASK),
-      bonusAwarded: !!l.bonusAwarded
+      id: (t && t.id) || uid(),
+      text: text,
+      done: !!(t && t.done) || isHistory,   // garantir done para histórico
+      _isHistory: isHistory
     };
-  }
+  });
+
+  return {
+    id: l.id || uid(),
+    title: l.title || 'Sem título',
+    tasks: mappedTasks,
+    completed: !!l.completed,
+    completedAt: l.completedAt || null,
+    repeat: l.repeat || 'once',
+    createdAt: l.createdAt || new Date().toISOString(),
+    availableOn: l.availableOn || todayISO,
+    originId: l.originId || null,
+    repeatDays: Array.isArray(l.repeatDays) ? l.repeatDays.slice() : [],
+    repeatDay: (typeof l.repeatDay === 'number') ? l.repeatDay : (l.repeatDay ? Number(l.repeatDay) : null),
+    // calcular pontos a partir das tarefas normalizadas quando pointsAwarded não existir
+    pointsAwarded: typeof l.pointsAwarded === 'number' ? l.pointsAwarded : (mappedTasks.filter(function(t){ return t.done; }).length * POINTS_PER_TASK),
+    bonusAwarded: !!l.bonusAwarded
+  };
+}
+
 
   // page helpers
   function getCurrentPage() {
@@ -364,7 +381,20 @@ function computeOverallProgressCurrentPage() {
   function isAvailableToday(list) {
     var today = startOfDay();
     var avail = startOfDay(new Date(list.availableOn || new Date().toISOString()));
-    if (list.completed) return false;
+      // se a lista estiver marcada como concluída:
+  // - se for repetida e a próxima availableOn já chegou (<= hoje), devemos tratá-la como disponível
+  // - caso contrário (não-repetida ou próxima ocorrência no futuro), não está disponível
+  if (list.completed) {
+    if (list.repeat && list.repeat !== 'once') {
+      if (avail <= today) {
+        // permitir prosseguir — consideraremos a lista disponível hoje mesmo que 'completed' esteja true
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
     if (list.repeat === 'daily') {
       return avail <= today;
     } else if (list.repeat === 'weekly') {
@@ -566,16 +596,85 @@ function isPlannedFuture(list) {
       var parsed = parseInputDate(inputDate.value) || startOfDay().toISOString();
       list.availableOn = parsed;
       var md = parseInt(inputMonthDay.value,10);
-      if (!isNaN(md) && md >= 1 && md <= 31) list.repeatDay = md;
-      else list.repeatDay = null;
+      // coletar dias da semana selecionados no formulário de edição
+      var selectedWeekdays = Array.from(form.querySelectorAll('input[name="list-repeat-days-edit"]:checked')).map(function(cb){return parseInt(cb.value,10);});
+      // Prioridade: se o usuário especificou um dia do mês válido, tratar como repetição mensal
+      if (!isNaN(md) && md >= 1 && md <= 31) {
+        list.repeatDay = md;
+        list.repeat = 'monthly';
+        // ao definir mensal, removemos seleções semanais para evitar conflito
+        list.repeatDays = [];
+      } else {
+        // nenhum dia do mês válido informado -> limpar repeatDay
+        list.repeatDay = null;
+        if (selectedWeekdays.length) {
+          // se houver dias da semana selecionados, tratar como semanal
+          list.repeatDays = selectedWeekdays;
+          list.repeat = 'weekly';
+        } else {
+          // nenhuma seleção -> se antes era semanal ou mensal, remover repetição, caso contrário limpar repeatDays
+          if (list.repeat === 'weekly' || list.repeat === 'monthly') {
+            list.repeat = 'once';
+            list.repeatDays = [];
+            list.repeatDay = null;
+          } else {
+            list.repeatDays = Array.isArray(list.repeatDays) ? [] : [];
+          }
+        }
+      }
       save(); renderLists(); var pg = getCurrentPage(); pg.selectedListId = list.id; renderTasks();
     });
+
     btnCancel.addEventListener('click', function(e){ e.stopPropagation(); renderLists(); renderTasks(); });
     actions.appendChild(btnCancel); actions.appendChild(btnSave);
     form.appendChild(inputTitle); form.appendChild(inputDate);
-    var mdContainer = document.createElement('div'); mdContainer.style.display='flex'; mdContainer.style.gap='8px'; mdContainer.style.alignItems='center';
-    mdContainer.appendChild(inputMonthDay);
+        var mdContainer = document.createElement('div');
+    // ocupar a linha inteira para que o texto do input seja totalmente visível
+    mdContainer.style.display = 'block';
+    mdContainer.style.width = '100%';
+    mdContainer.style.marginTop = '8px';
+    mdContainer.style.boxSizing = 'border-box';
+    // estilos no input para garantir que ocupe 100% da largura disponível
+    inputMonthDay.style.width = '100%';
+    inputMonthDay.style.boxSizing = 'border-box';
+    inputMonthDay.style.padding = '8px 10px';
+    inputMonthDay.style.fontSize = '14px';
+    inputMonthDay.style.display = 'block';
+        // Campo para selecionar múltiplos dias da semana (semana semanal)
+    var weekdayLabel = document.createElement('label');
+    weekdayLabel.textContent = 'Dias da semana (selecione um ou mais):';
+    weekdayLabel.style.display = 'block';
+    weekdayLabel.style.marginTop = '6px';
+    weekdayLabel.style.fontSize = '13px';
+    var days = [
+      {v:0,t:'Dom'},
+      {v:1,t:'Seg'},
+      {v:2,t:'Ter'},
+      {v:3,t:'Qua'},
+      {v:4,t:'Qui'},
+      {v:5,t:'Sex'},
+      {v:6,t:'Sáb'}
+    ];
+    var weekdayContainer = document.createElement('div');
+    weekdayContainer.style.display = 'block';
+    weekdayContainer.style.width = '100%';
+    weekdayContainer.style.marginTop = '4px';
+    weekdayContainer.appendChild(weekdayLabel);
+    var checkRow = document.createElement('div'); checkRow.style.display='flex'; checkRow.style.gap='6px'; checkRow.style.flexWrap='wrap'; checkRow.style.marginTop='6px';
+    days.forEach(function(d){
+      var cbWrap = document.createElement('label'); cbWrap.style.display='inline-flex'; cbWrap.style.alignItems='center'; cbWrap.style.gap='6px'; cbWrap.style.padding='4px 6px'; cbWrap.style.borderRadius='6px'; cbWrap.style.border='1px solid transparent';
+      var cb = document.createElement('input'); cb.type='checkbox'; cb.name='list-repeat-days-edit'; cb.value = String(d.v);
+      // pre-check if list.repeatDays contains this day
+      if (Array.isArray(list.repeatDays) && list.repeatDays.indexOf(d.v) !== -1) cb.checked = true;
+      var span = document.createElement('span'); span.textContent = d.t; span.style.fontSize='13px';
+      cbWrap.appendChild(cb); cbWrap.appendChild(span); checkRow.appendChild(cbWrap);
+    });
+    weekdayContainer.appendChild(checkRow);
+    form.appendChild(weekdayContainer);
+
+mdContainer.appendChild(inputMonthDay);
     form.appendChild(mdContainer);
+
     form.appendChild(actions);
     var left = listEl.querySelector('.list-left');
     if (left) { left.innerHTML=''; left.appendChild(form); inputTitle.focus(); form.addEventListener('click', function(ev){ ev.stopPropagation(); }); }
