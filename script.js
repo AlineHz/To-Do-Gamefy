@@ -361,13 +361,47 @@ function computeOverallProgressCurrentPage() {
   }
 
 
-  function isAvailableToday(list) {
-    var today = startOfDay();
-    var avail = startOfDay(new Date(list.availableOn || new Date().toISOString()));
-    if (list.completed) return false;
-    if (list.repeat === 'daily') {
-      return avail <= today;
-    } else if (list.repeat === 'weekly') {
+  
+function isAvailableToday(list) {
+  var today = startOfDay();
+  var avail = startOfDay(new Date(list.availableOn || new Date().toISOString()));
+
+  // se a lista estiver marcada como concluída:
+  // - se for repetida e a próxima availableOn já chegou (<= hoje), devemos tratá-la como disponível
+  // - caso contrário (não-repetida ou próxima ocorrência no futuro), não está disponível
+  if (list.completed) {
+    if (list.repeat && list.repeat !== 'once') {
+      if (avail <= today) {
+        // permitir prosseguir — consideraremos a lista disponível hoje mesmo que 'completed' esteja true
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+
+  if (list.repeat === 'daily') {
+    return avail <= today;
+  } else if (list.repeat === 'weekly') {
+    if (Array.isArray(list.repeatDays) && list.repeatDays.length) {
+      var todayIdx = today.getDay();
+      return avail <= today && list.repeatDays.indexOf(todayIdx) !== -1;
+    }
+    return avail <= today;
+  } else if (list.repeat === 'monthly') {
+    var targetDay = (typeof list.repeatDay === 'number' && !isNaN(list.repeatDay)) ? list.repeatDay : (new Date(list.availableOn)).getDate();
+    var todayDay = today.getDate();
+    var year = today.getFullYear(), month = today.getMonth();
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    var effectiveTarget = Math.min(targetDay, daysInMonth);
+    return avail <= today && todayDay === effectiveTarget;
+  } else {
+    return avail <= today;
+  }
+}
+
+else if (list.repeat === 'weekly') {
       if (Array.isArray(list.repeatDays) && list.repeatDays.length) {
         var todayIdx = today.getDay();
         return avail <= today && list.repeatDays.indexOf(todayIdx) !== -1;
