@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function () {
   const BONUS_PER_LIST = 50;
 
   // level/xp config
-  const XP_BASE = 100; // base incremental XP (see formula abaixo)
+  const XP_BASE = 100; // base incremental XP (see formula below)
 
   // audio helpers (unchanged)
   let _audioCtx = null;
@@ -361,98 +361,120 @@ function computeOverallProgressCurrentPage() {
   }
 
 
-  function isAvailableToday(list) {
-    var today = startOfDay();
-    var avail = startOfDay(new Date(list.availableOn || new Date().toISOString()));
-    if (list.completed) return false;
-    if (list.repeat === 'daily') {
-      return avail <= today;
-    } else if (list.repeat === 'weekly') {
-      if (Array.isArray(list.repeatDays) && list.repeatDays.length) {
-        var todayIdx = today.getDay();
-        return avail <= today && list.repeatDays.indexOf(todayIdx) !== -1;
-      }
-      return avail <= today;
-    } else if (list.repeat === 'monthly') {
-      var targetDay = (typeof list.repeatDay === 'number' && !isNaN(list.repeatDay)) ? list.repeatDay : (new Date(list.availableOn)).getDate();
-      var todayDay = today.getDate();
-      var year = today.getFullYear(), month = today.getMonth();
-      var daysInMonth = new Date(year, month + 1, 0).getDate();
-      var effectiveTarget = Math.min(targetDay, daysInMonth);
-      return avail <= today && todayDay === effectiveTarget;
-    } else {
-      return avail <= today;
-    }
-  }
-  
-function computeNextOccurrence(list) {
-    var today = startOfDay();
-    var avail = list.availableOn ? startOfDay(new Date(list.availableOn)) : null;
-    // If a one-time future availability is set, return it
-    if (list.repeat === 'once') {
-      if (avail && avail > today) return avail;
-      return null;
-    }
-    // Search forward up to 365 days for next matching occurrence after today
-    var maxDays = 365;
-    for (var i=1;i<=maxDays;i++) {
-      var cand = startOfDay(new Date());
-      cand.setDate(cand.getDate() + i);
-      // candidate must be >= avail if avail specified
-      if (avail && cand < avail) continue;
-      if (list.repeat === 'daily') {
-        return cand;
-      } else if (list.repeat === 'weekly') {
-        if (Array.isArray(list.repeatDays) && list.repeatDays.length) {
-          if (list.repeatDays.indexOf(cand.getDay()) !== -1) return cand;
-        } else {
-          // no specific days -> any week day works
-          return cand;
+    function getCurrentDate() {
+      // Verifica se o 'FakeDate' foi configurado (usando __dateEmulator)
+      if (window.__dateEmulator && window.__dateEmulator.getFakeNow) {
+        const fakeNow = window.__dateEmulator.getFakeNow();
+        if (fakeNow) {
+          console.log("Data emulada:", fakeNow);  // Verifique no console se a data emulada está sendo usada
+          return fakeNow;  // Retorna a data emulada
         }
-      } else if (list.repeat === 'monthly') {
-        var baseDay = (typeof list.repeatDay === 'number' && !isNaN(list.repeatDay)) ? list.repeatDay : (avail ? (new Date(list.availableOn)).getDate() : null);
-        if (!baseDay) continue;
-        var year = cand.getFullYear(), month = cand.getMonth();
-        // find days in that month
-        var daysInMonth = new Date(year, month+1, 0).getDate();
-        var day = Math.min(baseDay, daysInMonth);
-        if (cand.getDate() === day) return cand;
       }
+      
+      // Caso contrário, use a data real
+      const realDate = new Date();
+      console.log("Data real:", realDate);  // Verifique no console se a data real está sendo usada
+      return realDate;  // Retorna a data real
     }
-    return null;
+
+  function isAvailableToday(list) {
+      var today = startOfDay();
+      var avail = startOfDay(new Date(list.availableOn || new Date().toISOString()));
+
+      if (list.completed) {
+          if (list.repeat && list.repeat !== 'once') {
+              if (avail <= today) {
+                  // Permitir prosseguir — consideraremos a lista disponível hoje mesmo que 'completed' esteja true
+              } else {
+                  return false;
+              }
+          } else {
+              return false;
+          }
+      }
+
+      // Verifica a repetição diária, semanal ou mensal
+      if (list.repeat === 'daily') {
+          return avail <= today;
+      } else if (list.repeat === 'weekly') {
+          if (Array.isArray(list.repeatDays) && list.repeatDays.length) {
+              return avail <= today;
+          }
+          return avail <= today;
+      } else if (list.repeat === 'monthly') {
+          return avail <= today;
+      } else {
+          return avail <= today;
+      }
   }
 
+  function computeNextOccurrence(list) {
+      var today = startOfDay();
+      var avail = list.availableOn ? startOfDay(new Date(list.availableOn)) : null;
+
+      // Se a lista for única ('once'), não há próxima ocorrência
+      if (list.repeat === 'once') {
+          if (avail && avail > today) return avail;
+          return null;
+      }
+
+      // Para listas repetitivas, calcule a próxima ocorrência
+      var maxDays = 365; // Limite de dias para busca
+      for (var i = 1; i <= maxDays; i++) {
+          var cand = startOfDay(new Date());
+          cand.setDate(cand.getDate() + i);
+
+          // Ignorar se a data inicial for maior que a data de disponibilidade
+          if (avail && cand < avail) continue;
+
+          if (list.repeat === 'daily') {
+              return cand;
+          } else if (list.repeat === 'weekly') {
+              if (Array.isArray(list.repeatDays) && list.repeatDays.length) {
+                  if (list.repeatDays.indexOf(cand.getDay()) !== -1) return cand;
+              } else {
+                  // Se não houver dias específicos, qualquer dia da semana serve
+                  return cand;
+              }
+          } else if (list.repeat === 'monthly') {
+              var baseDay = (typeof list.repeatDay === 'number' && !isNaN(list.repeatDay)) ? list.repeatDay : (avail ? (new Date(list.availableOn)).getDate() : null);
+              if (!baseDay) continue;
+              var year = cand.getFullYear(), month = cand.getMonth();
+              var daysInMonth = new Date(year, month + 1, 0).getDate();
+              var day = Math.min(baseDay, daysInMonth);
+              if (cand.getDate() === day) return cand;
+          }
+      }
+      return null; // Se não encontrar uma data válida, retorna null
+  }
   
 
-function isPlannedFuture(list) {
-  // determina se a lista é 'planejada' — ou seja, tem próxima ocorrência NO FUTURO (após hoje)
-  var today = startOfDay();
-  var avail = list.availableOn ? startOfDay(new Date(list.availableOn)) : null;
+    function isPlannedFuture(list) {
+      // determina se a lista é 'planejada' — ou seja, tem próxima ocorrência NO FUTURO (após hoje)
+      var today = startOfDay();
+      var avail = list.availableOn ? startOfDay(new Date(list.availableOn)) : null;
 
-  // one-time lists: planned if availableOn is in the future
-  if (list.repeat === 'once') {
-    if (avail && avail > today) return true;
-    return false;
-  }
+      // one-time lists: planned if availableOn is in the future
+      if (list.repeat === 'once') {
+        if (avail && avail > today) return true;
+        return false;
+      }
 
-  // repeating lists:
-  // if the list is available today (segundo regras de repetição), então NÃO é planejada
-  if (isAvailableToday(list)) return false;
+      // repeating lists:
+      // if the list is available today (segundo regras de repetição), então NÃO é planejada
+      if (isAvailableToday(list)) return false;
 
-  // if availableOn exists and is in the future, it's planned
-  if (avail && avail > today) return true;
+      // if availableOn exists and is in the future, it's planned
+      if (avail && avail > today) return true;
 
-  // otherwise compute the next occurrence after today; if it's > today, it's planned
-  try {
-    var next = computeNextOccurrence(list);
-    if (next && startOfDay(next) > today) return true;
-  } catch (e) {}
+      // otherwise compute the next occurrence after today; if it's > today, it's planned
+      try {
+        var next = computeNextOccurrence(list);
+        if (next && startOfDay(next) > today) return true;
+      } catch (e) {}
 
-  return false;
-}
-
-
-
+      return false;
+    }
 
 
   // ----------------------
@@ -566,16 +588,84 @@ function isPlannedFuture(list) {
       var parsed = parseInputDate(inputDate.value) || startOfDay().toISOString();
       list.availableOn = parsed;
       var md = parseInt(inputMonthDay.value,10);
-      if (!isNaN(md) && md >= 1 && md <= 31) list.repeatDay = md;
-      else list.repeatDay = null;
+      // coletar dias da semana selecionados no formulário de edição
+      var selectedWeekdays = Array.from(form.querySelectorAll('input[name=\"list-repeat-days-edit\"]:checked')).map(function(cb){return parseInt(cb.value,10);});
+      // Prioridade: se o usuário especificou um dia do mês válido, tratar como repetição mensal
+      if (!isNaN(md) && md >= 1 && md <= 31) {
+        list.repeatDay = md;
+        list.repeat = 'monthly';
+        // ao definir mensal, removemos seleções semanais para evitar conflito
+        list.repeatDays = [];
+      } else {
+        // nenhum dia do mês válido informado -> limpar repeatDay
+        list.repeatDay = null;
+        if (selectedWeekdays.length) {
+          // se houver dias da semana selecionados, tratar como semanal
+          list.repeatDays = selectedWeekdays;
+          list.repeat = 'weekly';
+        } else {
+          // nenhuma seleção -> se antes era semanal ou mensal, remover repetição, caso contrário limpar repeatDays
+          if (list.repeat === 'weekly' || list.repeat === 'monthly') {
+            list.repeat = 'once';
+            list.repeatDays = [];
+            list.repeatDay = null;
+          } else {
+            list.repeatDays = Array.isArray(list.repeatDays) ? [] : [];
+          }
+        }
+      }
       save(); renderLists(); var pg = getCurrentPage(); pg.selectedListId = list.id; renderTasks();
     });
     btnCancel.addEventListener('click', function(e){ e.stopPropagation(); renderLists(); renderTasks(); });
     actions.appendChild(btnCancel); actions.appendChild(btnSave);
     form.appendChild(inputTitle); form.appendChild(inputDate);
-    var mdContainer = document.createElement('div'); mdContainer.style.display='flex'; mdContainer.style.gap='8px'; mdContainer.style.alignItems='center';
-    mdContainer.appendChild(inputMonthDay);
+        var mdContainer = document.createElement('div');
+    // ocupar a linha inteira para que o texto do input seja totalmente visível
+    mdContainer.style.display = 'block';
+    mdContainer.style.width = '100%';
+    mdContainer.style.marginTop = '8px';
+    mdContainer.style.boxSizing = 'border-box';
+    // estilos no input para garantir que ocupe 100% da largura disponível
+    inputMonthDay.style.width = '100%';
+    inputMonthDay.style.boxSizing = 'border-box';
+    inputMonthDay.style.padding = '8px 10px';
+    inputMonthDay.style.fontSize = '14px';
+    inputMonthDay.style.display = 'block';
+        // Campo para selecionar múltiplos dias da semana (semana semanal)
+    var weekdayLabel = document.createElement('label');
+    weekdayLabel.textContent = 'Dias da semana (selecione um ou mais):';
+    weekdayLabel.style.display = 'block';
+    weekdayLabel.style.marginTop = '6px';
+    weekdayLabel.style.fontSize = '13px';
+    var days = [
+      {v:0,t:'Dom'},
+      {v:1,t:'Seg'},
+      {v:2,t:'Ter'},
+      {v:3,t:'Qua'},
+      {v:4,t:'Qui'},
+      {v:5,t:'Sex'},
+      {v:6,t:'Sáb'}
+    ];
+    var weekdayContainer = document.createElement('div');
+    weekdayContainer.style.display = 'block';
+    weekdayContainer.style.width = '100%';
+    weekdayContainer.style.marginTop = '4px';
+    weekdayContainer.appendChild(weekdayLabel);
+    var checkRow = document.createElement('div'); checkRow.style.display='flex'; checkRow.style.gap='6px'; checkRow.style.flexWrap='wrap'; checkRow.style.marginTop='6px';
+    days.forEach(function(d){
+      var cbWrap = document.createElement('label'); cbWrap.style.display='inline-flex'; cbWrap.style.alignItems='center'; cbWrap.style.gap='6px'; cbWrap.style.padding='4px 6px'; cbWrap.style.borderRadius='6px'; cbWrap.style.border='1px solid transparent';
+      var cb = document.createElement('input'); cb.type='checkbox'; cb.name='list-repeat-days-edit'; cb.value = String(d.v);
+      // pre-check if list.repeatDays contains this day
+      if (Array.isArray(list.repeatDays) && list.repeatDays.indexOf(d.v) !== -1) cb.checked = true;
+      var span = document.createElement('span'); span.textContent = d.t; span.style.fontSize='13px';
+      cbWrap.appendChild(cb); cbWrap.appendChild(span); checkRow.appendChild(cbWrap);
+    });
+    weekdayContainer.appendChild(checkRow);
+    form.appendChild(weekdayContainer);
+
+mdContainer.appendChild(inputMonthDay);
     form.appendChild(mdContainer);
+
     form.appendChild(actions);
     var left = listEl.querySelector('.list-left');
     if (left) { left.innerHTML=''; left.appendChild(form); inputTitle.focus(); form.addEventListener('click', function(ev){ ev.stopPropagation(); }); }
@@ -748,41 +838,43 @@ function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; sav
 
   
 
-function setCompletedAndSchedule(list) {
-    // mark completed now (historical marker)
-    list.completed = true;
-    list.completedAt = (new Date()).toISOString();
-    // award bonus if not already awarded
-    if (!list.bonusAwarded) {
-      list.pointsAwarded = (Number(list.pointsAwarded) || 0) + BONUS_PER_LIST;
-      list.bonusAwarded = true;
-    }
-    // compute next occurrence for repeating lists and schedule it
-    if (list.repeat && list.repeat !== 'once') {
-      var next = computeNextOccurrence(list);
-      if (next) {
-        // set availableOn to next occurrence (ISO)
-        list.availableOn = startOfDay(next).toISOString();
-        // prepare tasks for the next occurrence: mark them as not done so they show up as planned
-        if (Array.isArray(list.tasks)) {
-          list.tasks.forEach(function(t){ t.done = false; });
-        }
-        // add a single history record task that remains marked as done so it shows in completed tasks
-        try {
-          var histText = 'Concluído em ' + (new Date()).toLocaleDateString('pt-BR');
-          var histId = 'hist_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-          // keep history tasks at the end of tasks array
-          list.tasks.push({ id: histId, text: histText, done: true, _isHistory: true });
-        } catch(e){}
-        // keep list.completed = true so it continues to appear under Concluídas as a record
-        // and allow it to also be shown under Planejados because availableOn is in the future
-        // reset bonusAwarded so user can receive bonus again next time
-        list.bonusAwarded = false;
+  function setCompletedAndSchedule(list) {
+      // Marcar a tarefa como concluída e premiar pontos
+      list.completedAt = (new Date()).toISOString();
+      if (!list.bonusAwarded) {
+          list.bonusAwarded = true;
       }
-    }
-    save(); renderLists(); renderTasks();
-  }
 
+      // Se a lista for repetitiva, agendar a próxima ocorrência sem marcar a lista como concluída.
+      if (list.repeat && list.repeat !== 'once') {
+          var next = computeNextOccurrence(list);
+          if (next) {
+              // Atualizar a data para a próxima ocorrência
+              list.availableOn = startOfDay(next).toISOString();
+
+              // Marcar as tarefas dos dias anteriores como concluídas, exceto a última (a do dia atual)
+              list.tasks.forEach(function(t, index) {
+                  if (index < list.tasks.length - 1 && !t.done) {  // Marcar tarefas anteriores como concluídas
+                      t.done = true;
+                  }
+              });
+
+              // Criar a tarefa para o próximo dia (novo ciclo) com o nome da tarefa original
+              list.tasks.push({
+                  id: uid(),
+                  text: `${list.tasks[0].text} - ${new Date(list.availableOn).toLocaleDateString('pt-BR')}`, // Nome da tarefa original + nova data
+                  done: false, // Cria a tarefa como não concluída
+                  _isHistory: false // Marca como uma tarefa normal
+              });
+
+              // A tarefa histórica "Concluído em..." não deve aparecer como disponível para o usuário
+              // Ela só serve como um registro do histórico de conclusão
+              list.bonusAwarded = false; // Resetando bônus para a próxima tarefa
+          }
+      }
+
+      save(); renderLists(); renderTasks();
+  }
 
 
   function toggleTask(listId, taskId) {
@@ -793,27 +885,48 @@ function setCompletedAndSchedule(list) {
     if (!task) return;
     var prev = !!task.done;
     task.done = !task.done;
+
+    // Variáveis para controlar os pontos a serem adicionados
+    var pointsToAdd = 0;
+
     if (!prev && task.done) {
-      list.pointsAwarded = (Number(list.pointsAwarded) || 0) + POINTS_PER_TASK;
-      animatePoints(POINTS_PER_TASK);
-      try { playShortChime(); } catch(e){}
+        // Adiciona pontos da tarefa, mas verifica se já foram adicionados
+        if (!task._pointsAwarded) {
+            pointsToAdd += POINTS_PER_TASK;
+            task._pointsAwarded = true;  // Marcar a tarefa como pontuada
+        }
     } else if (prev && !task.done) {
-      list.pointsAwarded = Math.max(0, (Number(list.pointsAwarded) || 0) - POINTS_PER_TASK);
-      animatePoints(-POINTS_PER_TASK);
+        // Remove pontos da tarefa
+        if (task._pointsAwarded) {
+            pointsToAdd -= POINTS_PER_TASK;
+            task._pointsAwarded = false;  // Desmarcar a tarefa como pontuada
+        }
     }
+
+    // Verifica se todas as tarefas estão feitas
     var allDone = (list.tasks || []).length > 0 && (list.tasks || []).every(function(t){ return t.done; });
+
     if (allDone && !list.completed) {
-      setCompletedAndSchedule(list);
-      try { playShortChime(); } catch(e){}
+        // A lista está completa e deve ser marcada como concluída
+        pointsToAdd += BONUS_PER_LIST;
+        setCompletedAndSchedule(list);  // Marca como concluída e agenda a próxima ocorrência
     } else if (!allDone && list.completed) {
-      if (list.bonusAwarded) {
-        list.pointsAwarded = Math.max(0, (Number(list.pointsAwarded) || 0) - BONUS_PER_LIST);
-        animatePoints(-BONUS_PER_LIST);
-        list.bonusAwarded = false;
-      }
-      list.completed = false;
-      list.completedAt = null;
+        if (list.bonusAwarded) {
+            // Remove o bônus se a lista não estiver mais completa
+            pointsToAdd -= BONUS_PER_LIST;
+            list.bonusAwarded = false;
+        }
+        list.completed = false;
+        list.completedAt = null;
     }
+
+    // Atualiza os pontos da lista
+    list.pointsAwarded = (Number(list.pointsAwarded) || 0) + pointsToAdd;
+
+    // Anima apenas uma vez, com a quantidade total de pontos
+    animatePoints(pointsToAdd);
+    try { playShortChime(); } catch(e){}
+
     save(); renderLists(); renderTasks();
   }
 
