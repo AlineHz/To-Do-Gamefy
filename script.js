@@ -740,6 +740,8 @@ function renderLists() {
     if (!filtered.find(function(x){ return x.id === pg.selectedListId; })) pg.selectedListId = filtered[0].id;
   }
 
+
+
 function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; save(); renderLists(); renderTasks(); }
 
   function renderTasks() {
@@ -836,45 +838,55 @@ function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; sav
     save(); renderLists(); renderTasks();
   }
 
-  
+function setCompletedAndSchedule(list) {
+    // Marcar a tarefa como concluída e premiar pontos
+    list.completedAt = (new Date()).toISOString();
+    if (!list.bonusAwarded) {
+        list.bonusAwarded = true;
+    }
 
-  function setCompletedAndSchedule(list) {
-      // Marcar a tarefa como concluída e premiar pontos
-      list.completedAt = (new Date()).toISOString();
-      if (!list.bonusAwarded) {
-          list.bonusAwarded = true;
-      }
+    // Se a lista for repetitiva, agendar a próxima ocorrência sem marcar a lista como concluída.
+    if (list.repeat && list.repeat !== 'once') {
+        var next = computeNextOccurrence(list);
+        if (next) {
+            // Atualizar a data para a próxima ocorrência
+            list.availableOn = startOfDay(next).toISOString();
 
-      // Se a lista for repetitiva, agendar a próxima ocorrência sem marcar a lista como concluída.
-      if (list.repeat && list.repeat !== 'once') {
-          var next = computeNextOccurrence(list);
-          if (next) {
-              // Atualizar a data para a próxima ocorrência
-              list.availableOn = startOfDay(next).toISOString();
+            // Marcar as tarefas dos dias anteriores como concluídas, exceto a última (a do dia atual)
+            list.tasks.forEach(function(t, index) {
+                if (index < list.tasks.length - 1 && !t.done) {  // Marcar tarefas anteriores como concluídas
+                    t.done = true;
+                }
+            });
 
-              // Marcar as tarefas dos dias anteriores como concluídas, exceto a última (a do dia atual)
-              list.tasks.forEach(function(t, index) {
-                  if (index < list.tasks.length - 1 && !t.done) {  // Marcar tarefas anteriores como concluídas
-                      t.done = true;
-                  }
-              });
+            // Criar a tarefa para o próximo dia (novo ciclo) com o nome da tarefa original
+            list.tasks.push({
+                id: uid(),
+                text: `${list.tasks[0].text} - ${new Date(list.availableOn).toLocaleDateString('pt-BR')}`, // Nome da tarefa original + nova data
+                done: false, // Cria a tarefa como não concluída
+                _isHistory: false // Marca como uma tarefa normal
+            });
 
-              // Criar a tarefa para o próximo dia (novo ciclo) com o nome da tarefa original
-              list.tasks.push({
-                  id: uid(),
-                  text: `${list.tasks[0].text} - ${new Date(list.availableOn).toLocaleDateString('pt-BR')}`, // Nome da tarefa original + nova data
-                  done: false, // Cria a tarefa como não concluída
-                  _isHistory: false // Marca como uma tarefa normal
-              });
+            // A tarefa histórica "Concluído em..." não deve aparecer como disponível para o usuário
+            // Ela só serve como um registro do histórico de conclusão
+            list.bonusAwarded = false; // Resetando bônus para a próxima tarefa
+        }
+    }
 
-              // A tarefa histórica "Concluído em..." não deve aparecer como disponível para o usuário
-              // Ela só serve como um registro do histórico de conclusão
-              list.bonusAwarded = false; // Resetando bônus para a próxima tarefa
-          }
-      }
+    // Verifica se todas as tarefas da lista estão concluídas, considerando apenas as que já ocorreram
+    const allTasksCompleted = (list.tasks || []).every(function(t) {
+        // Considera tarefas futuras como incompletas
+        return t.done || new Date(t.availableOn) > new Date();
+    });
 
-      save(); renderLists(); renderTasks();
-  }
+    // Se todas as tarefas estiverem concluídas, marca a lista como concluída
+    if (allTasksCompleted) {
+        list.completed = true; // Marca a lista como concluída
+    }
+
+    save(); renderLists(); renderTasks();
+}
+
 
 
   function toggleTask(listId, taskId) {
