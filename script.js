@@ -839,57 +839,71 @@ function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; sav
   }
 
 function setCompletedAndSchedule(list) {
-    // Marcar a tarefa como concluída e premiar pontos
-    list.completedAt = (new Date()).toISOString();
-    if (!list.bonusAwarded) {
-        list.bonusAwarded = true;
-    }
+  // marca timestamp da ocorrência atual
+  list.completedAt = (new Date()).toISOString();
 
-    // Se a lista for repetitiva, agendar a próxima ocorrência sem marcar a lista como concluída.
-    if (list.repeat && list.repeat !== 'once') {
-        var next = computeNextOccurrence(list);
-        if (next) {
-            // Atualizar a data para a próxima ocorrência
-            list.availableOn = startOfDay(next).toISOString();
+  if (!list.bonusAwarded) {
+    list.bonusAwarded = true;
+  }
 
-            // Marcar as tarefas anteriores como concluídas
-            list.tasks.forEach(function(t) {
-                if (!t.done) { // Marcar tarefas incompletas como concluídas
-                    t.done = true;
-                }
-            });
+  // Se for repetitiva (não 'once'), re-agendamos e criamos histórico
+  if (list.repeat && list.repeat !== 'once') {
+    var next = null;
+    try { next = computeNextOccurrence(list); } catch(e) { next = null; }
 
-            // Criar tarefas para o próximo ciclo com os mesmos textos das tarefas anteriores
-            list.tasks.forEach(function(t) {
-                // Criar novas tarefas com os mesmos textos e uma nova data
-                list.tasks.push({
-                    id: uid(),
-                    text: `${t.text} - ${new Date(list.availableOn).toLocaleDateString('pt-BR')}`, // Nome da tarefa original + nova data
-                    done: false, // Cria a tarefa como não concluída
-                    _isHistory: false // Marca como uma tarefa normal
-                });
-            });
-
-            // Resetar o bônus para a próxima tarefa
-            list.bonusAwarded = false;
-        }
-    }
-
-    // Verifica se todas as tarefas da lista estão concluídas, considerando apenas as que já ocorreram
-    const allTasksCompleted = (list.tasks || []).every(function(t) {
-        // Considera tarefas futuras como incompletas
-        return t.done || new Date(t.availableOn) > new Date();
+    // --- Criar snapshot de histórico: todas as tarefas da ocorrência atual
+    // As tarefas de histórico representam uma ocorrência que acabou de ser concluída,
+    // então aqui definimos done: true para que o progresso permaneça visível.
+    var origTasks = Array.isArray(list.tasks) ? list.tasks.slice() : [];
+    var historyTasks = origTasks.map(function(t) {
+      return {
+        id: uid(),
+        text: t.text,
+        done: true,               // <-- importante: marca histórico como concluído
+        _isHistory: true,
+        _originTaskId: t.id || null,
+        _completedAt: (new Date()).toISOString()
+      };
     });
 
-    // Se todas as tarefas estiverem concluídas, marca a lista como concluída
-    if (allTasksCompleted) {
-        list.completed = true; // Marca a lista como concluída
+    // --- Criar tarefas limpas para a próxima ocorrência (incompletas)
+    var nextTasks = origTasks.map(function(t){
+      return {
+        id: uid(),
+        text: t.text,
+        done: false
+      };
+    });
+
+    // Junta histórico + próximas tarefas (histórico vem primeiro)
+    list.tasks = historyTasks.concat(nextTasks);
+
+    // Agendar próxima ocorrência (se encontrada)
+    if (next) {
+      list.availableOn = startOfDay(next).toISOString();
+    } else {
+      // fallback: deixa disponível hoje
+      list.availableOn = startOfDay().toISOString();
     }
 
-    save();
-    renderLists();
-    renderTasks();
+    // lista não é marcada como concluída permanentemente (permanece para próximos ciclos)
+    list.completed = false;
+    // já registramos completedAt para a ocorrência; limpa completedAt permanente
+    // porque a lista continuará ativa nos próximos ciclos
+    // (ou preserve se preferir histórico separado)
+    // list.completedAt = null;
+
+  } else {
+    // Para listas 'once' comportamento normal: marcar concluída permanentemente
+    list.completed = true;
+    list.completedAt = (new Date()).toISOString();
+  }
+
+  save();
+  renderLists();
+  renderTasks();
 }
+
 
 
 
