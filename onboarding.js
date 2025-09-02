@@ -140,10 +140,10 @@
     // actions
     var controls = el('div',{class:'onboard-controls'});
     var prev = el('button',{class:'onboard-btn',type:'button',text:'Anterior'});
-    var next = el('button',{class:'onboard-btn primary',type:'button',text:'Próximo'});
-    var finishBtn = el('button',{class:'onboard-btn primary',type:'button',text:'Concluir e não mostrar novamente'});
+    var next = el('button',{id:'onboard-next',class:'onboard-btn primary',type:'button',text:'Próximo'});
+    var finishBtn = el('button',{id:'onboard-finish',class:'onboard-btn primary',type:'button',text:'Concluir e não mostrar novamente'});
     prev.addEventListener('click', function(){ goTo(stepIndex-1); });
-    next.addEventListener('click', function(){ goTo(stepIndex+1); });
+    
     finishBtn.addEventListener('click', function(){ finish(false); });
     controls.appendChild(prev); controls.appendChild(next); controls.appendChild(finishBtn);
     panel.appendChild(controls);
@@ -197,6 +197,22 @@
     }
 
     // run step action if any (but don't be intrusive)
+    // Update next button label/behavior on the last step: show "Fechar" and make it close the modal.
+    try{
+      var nextBtn = panel.querySelector('#onboard-next');
+      var finishBtn = panel.querySelector('#onboard-finish');
+      if (nextBtn){
+        if (stepIndex === steps.length - 1){
+          nextBtn.textContent = 'Fechar';
+          nextBtn.onclick = function(){ finish(false); };
+          if (finishBtn) finishBtn.style.display = 'none';
+        } else {
+          nextBtn.textContent = 'Próximo';
+          nextBtn.onclick = function(){ goTo(stepIndex+1); };
+          if (finishBtn) finishBtn.style.display = 'inline-block';
+        }
+      }
+    } catch(e){}
     try{ if (typeof s.action === 'function') s.action(); } catch(e){}
   }
 
