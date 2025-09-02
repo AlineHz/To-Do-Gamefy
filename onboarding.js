@@ -55,7 +55,7 @@
     {
       id: 'welcome',
       title: 'Bem-vindo(a)!',
-      text: 'Esta é sua nova app de checklists gamificada. Você pode criar páginas, listas e tarefas. Ao completar tarefas você ganha pontos e sobe de level — e ao subir de level você ganha moedas especiais.',
+      text: 'Esta é sua nova checklists gamificada feita pela Aline! Você pode criar páginas, listas e tarefas. Ao completar tarefas você ganha pontos e sobe de level — e ao subir de level você ganha moedas especiais.',
       selector: null,
       action: null
     },
