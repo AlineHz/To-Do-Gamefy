@@ -1,4 +1,17 @@
-/* script.js — versão com sistema de levels baseado nos pontos totais */
+
+/* script_with_taskArrays.js — versão adaptada: mantém um array (list.taskArray) com as tarefas para cada lista
+   Principais mudanças:
+   - normalizeList agora inicializa list.taskArray a partir de list.tasks ao carregar.
+   - addList cria list.taskArray = [].
+   - addTask insere também em list.taskArray.
+   - removeTask remove também de list.taskArray.
+   - toggleTask mantém list.taskArray sincronizado (done e _pointsAwarded).
+   - setCompletedAndSchedule cria historyTasks/nextTasks e atualiza list.taskArray.
+   - Novas funções utilitárias:
+       ensureTaskArray(list) -> garante que list.taskArray exista e esteja sincronizada.
+       getTasksArray(listId) -> retorna array de tarefas (cópia) da lista indicada.
+       buildAllTaskArrays() -> retorna um objeto { listId: [tasks...] } para a página atual.
+*/
 document.addEventListener('DOMContentLoaded', function () {
   // elements (nav + app)
   const pagesListEl = document.getElementById('pages-list');
@@ -174,12 +187,24 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function normalizeList(l) {
+  
+function normalizeList(l) {
     const todayISO = startOfDay().toISOString();
+    // garante tasks array padrão normalizado
+    var tasks = (l.tasks || []).map(function (t) { return { id: t.id || uid(), text: t.text || '', done: !!t.done, _pointsAwarded: !!t._pointsAwarded, _isHistory: !!t._isHistory }; });
+    // cria taskArray (um array separado que pode ser usado para export/analytics) a partir de tasks se não existir
+    var taskArray = Array.isArray(l.taskArray) ? l.taskArray.slice() : tasks.map(function(t){ return { id: t.id, text: t.text, done: !!t.done, _pointsAwarded: !!t._pointsAwarded, _isHistory: !!t._isHistory }; });
+
+    // Template persistente para geração de próximas tarefas em listas repetitivas.
+    // Não confundir com taskArray (que é efêmero e reseta à meia-noite).
+    var templateTasks = Array.isArray(l.templateTasks) ? l.templateTasks.slice() : (taskArray && taskArray.length ? taskArray.map(function(t){ return { id: t.id || uid(), text: t.text }; }) : tasks.map(function(t){ return { id: t.id || uid(), text: t.text }; }));
+
     return {
       id: l.id || uid(),
       title: l.title || 'Sem título',
-      tasks: (l.tasks || []).map(function (t) { return { id: t.id || uid(), text: t.text || '', done: !!t.done }; }),
+      tasks: tasks,
+      taskArray: taskArray,
+      templateTasks: templateTasks,
       completed: !!l.completed,
       completedAt: l.completedAt || null,
       repeat: l.repeat || 'once',
@@ -191,6 +216,51 @@ document.addEventListener('DOMContentLoaded', function () {
       pointsAwarded: typeof l.pointsAwarded === 'number' ? l.pointsAwarded : ((l.tasks || []).filter(function(t){return t.done}).length * POINTS_PER_TASK),
       bonusAwarded: !!l.bonusAwarded
     };
+  }
+
+
+  // ----------------------
+  // NOVAS FUNÇÕES: TASK ARRAY
+  // ----------------------
+
+  // Garante que list.taskArray exista e esteja sincronizada com list.tasks
+  function ensureTaskArray(list) {
+    if (!list) return;
+    if (!Array.isArray(list.taskArray)) {
+      list.taskArray = (list.tasks || []).map(function(t){ return { id: t.id, text: t.text, done: !!t.done, _pointsAwarded: !!t._pointsAwarded, _isHistory: !!t._isHistory }; });
+      return;
+    }
+    // sincroniza flags de done e _pointsAwarded por id
+    (list.tasks || []).forEach(function(t){
+      var a = list.taskArray.find(function(x){ return x.id === t.id; });
+      if (a) { a.text = t.text; a.done = !!t.done; a._pointsAwarded = !!t._pointsAwarded; }
+      else { // tarefa presente em tasks mas não em taskArray -> adicionar
+        list.taskArray.push({ id: t.id, text: t.text, done: !!t.done, _pointsAwarded: !!t._pointsAwarded, _isHistory: !!t._isHistory });
+      }
+    });
+    // remove da taskArray itens que não existem mais em tasks (opcional)
+    list.taskArray = list.taskArray.filter(function(a){ return (list.tasks || []).some(function(t){ return t.id === a.id; }); });
+  }
+
+  // Retorna uma cópia do array de tarefas para a lista indicada (por id). Se não houver, retorna [].
+  function getTasksArray(listId) {
+    var pg = getCurrentPage();
+    var list = (pg.lists || []).find(function(l){ return l.id === listId; });
+    if (!list) return [];
+    ensureTaskArray(list);
+    // devolve cópia para evitar mutação externa
+    return (list.taskArray || []).map(function(t){ return Object.assign({}, t); });
+  }
+
+  // Constrói um objeto com { listId: [tasks...] } para a página atual
+  function buildAllTaskArrays() {
+    var pg = getCurrentPage();
+    var out = {};
+    (pg.lists || []).forEach(function(l){
+      ensureTaskArray(l);
+      out[l.id] = (l.taskArray || []).map(function(t){ return Object.assign({}, t); });
+    });
+    return out;
   }
 
   // page helpers
@@ -227,7 +297,6 @@ document.addEventListener('DOMContentLoaded', function () {
     state.currentPageId = state.pages[Math.max(0, idx-1)].id;
     save();
     renderPagesNav();
-    renderLists();
     renderTasks();
   }
 
@@ -325,7 +394,7 @@ document.addEventListener('DOMContentLoaded', function () {
     var done = list.tasks.filter(function(t){return t.done}).length;
     return Math.round((done / list.tasks.length) * 100);
   }
-  
+
 function computeOverallProgressCurrentPage() {
     var pg = getCurrentPage();
     if (!pg) return 0;
@@ -370,7 +439,7 @@ function computeOverallProgressCurrentPage() {
           return fakeNow;  // Retorna a data emulada
         }
       }
-      
+
       // Caso contrário, use a data real
       const realDate = new Date();
       console.log("Data real:", realDate);  // Verifique no console se a data real está sendo usada
@@ -447,7 +516,7 @@ function computeOverallProgressCurrentPage() {
       }
       return null; // Se não encontrar uma data válida, retorna null
   }
-  
+
 
     function isPlannedFuture(list) {
       // determina se a lista é 'planejada' — ou seja, tem próxima ocorrência NO FUTURO (após hoje)
@@ -704,7 +773,7 @@ mdContainer.appendChild(inputMonthDay);
     return el;
   }
 
-  
+
 function renderLists() {
     var pg = getCurrentPage();
     if (!listsContainer) return;
@@ -755,6 +824,9 @@ function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; sav
       updateGlobalProgress();
       return;
     }
+    // garante que exista taskArray sincronizada
+    ensureTaskArray(list);
+
     emptyStateEl.style.display='none';
     listAreaEl.style.display='flex';
     var planned = isPlannedFuture(list);
@@ -819,7 +891,7 @@ function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; sav
     var now = new Date();
     var availableOn = availableOnISO || startOfDay(now).toISOString();
     var item = {
-      id: uid(), title: title, tasks: [], completed: false, completedAt: null,
+      id: uid(), title: title, tasks: [], taskArray: [], templateTasks: [], completed: false, completedAt: null,
       repeat: repeat || 'once', createdAt: now.toISOString(), availableOn: startOfDay(new Date(availableOn)).toISOString(),
       originId: null, repeatDays: Array.isArray(repeatDays) ? repeatDays.slice() : [], repeatDay: (typeof repeatDay === 'number' && !isNaN(repeatDay)) ? repeatDay : null,
       pointsAwarded: 0, bonusAwarded: false
@@ -829,14 +901,28 @@ function selectList(id) { var pg = getCurrentPage(); pg.selectedListId = id; sav
     save(); renderLists(); renderTasks();
   }
 
-  function addTask(listId, text) {
+  
+function addTask(listId, text) {
     var pg = getCurrentPage();
     text = (text || '').trim(); if (!text) return;
     var list = pg.lists.find(function(l){ return l.id === listId; });
     if (!list) return;
-    list.tasks.push({ id: uid(), text: text, done: false });
+    var newTask = { id: uid(), text: text, done: false };
+    list.tasks.push(newTask);
+    // garantir taskArray e adicionar lá também (efêmero)
+    ensureTaskArray(list);
+    list.taskArray.push({ id: newTask.id, text: newTask.text, done: false, _pointsAwarded: false, _isHistory: false });
+    // garantir templateTasks (modelo persistente) — adiciona apenas se não existir texto igual (trimmed, case-insensitive)
+    if (!Array.isArray(list.templateTasks)) list.templateTasks = [];
+    var exists = (list.templateTasks || []).some(function(tt){ return (tt.text || '').trim().toLowerCase() === text.trim().toLowerCase(); });
+    if (!exists) {
+        list.templateTasks.push({ id: uid(), text: text });
+    }
     save(); renderLists(); renderTasks();
   }
+
+
+
 
 function setCompletedAndSchedule(list) {
   // marca timestamp da ocorrência atual
@@ -851,58 +937,75 @@ function setCompletedAndSchedule(list) {
     var next = null;
     try { next = computeNextOccurrence(list); } catch(e) { next = null; }
 
-    // --- Criar snapshot de histórico: todas as tarefas da ocorrência atual
-    // As tarefas de histórico representam uma ocorrência que acabou de ser concluída,
-    // então aqui definimos done: true para que o progresso permaneça visível.
-    var origTasks = Array.isArray(list.tasks) ? list.tasks.slice() : [];
+    // --- Criar snapshot das tarefas da ocorrência atual (não-históricas)
+    var currentOccurrence = (list.tasks || []).filter(function(t){ return !t._isHistory; });
+    var origTasks = currentOccurrence.length ? currentOccurrence : (list.tasks || []).slice();
+
+    // --- Criar snapshot de histórico: todas as tarefas da ocorrência atual marcadas como concluídas
     var historyTasks = origTasks.map(function(t) {
       return {
         id: uid(),
         text: t.text,
-        done: true,               // <-- importante: marca histórico como concluído
+        done: true,
         _isHistory: true,
         _originTaskId: t.id || null,
-        _completedAt: (new Date()).toISOString()
+        _completedAt: (new Date()).toISOString(),
+        _pointsAwarded: !!t._pointsAwarded
       };
     });
 
-    // --- Criar tarefas limpas para a próxima ocorrência (incompletas)
-    var nextTasks = origTasks.map(function(t){
+    // --- Determinar origem/template para próximas tarefas
+    // Preferimos usar list.templateTasks (modelo persistente) se existir e tiver conteúdo.
+    var templateSourceRaw = Array.isArray(list.templateTasks) && list.templateTasks.length ? list.templateTasks : origTasks.map(function(t){ return { text: t.text }; });
+
+    // Deduplicar o template por texto (trim + lowercase)
+    var seen = {};
+    var templateSource = [];
+    templateSourceRaw.forEach(function(item){
+      var key = (item.text || '').toString().trim().toLowerCase();
+      if (!key) return;
+      if (!seen[key]) { seen[key] = true; templateSource.push(item); }
+    });
+
+    // --- Criar tarefas limpas para a próxima ocorrência (incompletas) => geradas a partir do templateSource
+    var nextTasks = templateSource.map(function(t){
       return {
         id: uid(),
         text: t.text,
-        done: false
+        done: false,
+        _pointsAwarded: false
       };
     });
 
     // Junta histórico + próximas tarefas (histórico vem primeiro)
     list.tasks = historyTasks.concat(nextTasks);
 
+    // NÃO sobrescrevemos list.templateTasks aqui — é o modelo persistente.
+    // Mas podemos atualizar taskArray (efêmero) para refletir as próximas tarefas se desejado:
+    // list.taskArray = nextTasks.map(function(t){ return { id: t.id, text: t.text, done: t.done, _pointsAwarded: t._pointsAwarded }; });
+
     // Agendar próxima ocorrência (se encontrada)
     if (next) {
       list.availableOn = startOfDay(next).toISOString();
     } else {
-      // fallback: deixa disponível hoje
       list.availableOn = startOfDay().toISOString();
     }
 
-    // lista não é marcada como concluída permanentemente (permanece para próximos ciclos)
     list.completed = false;
-    // já registramos completedAt para a ocorrência; limpa completedAt permanente
-    // porque a lista continuará ativa nos próximos ciclos
-    // (ou preserve se preferir histórico separado)
-    // list.completedAt = null;
-
   } else {
     // Para listas 'once' comportamento normal: marcar concluída permanentemente
     list.completed = true;
     list.completedAt = (new Date()).toISOString();
+    // sincroniza taskArray também (todas as tasks permanecem)
+    ensureTaskArray(list);
   }
 
   save();
   renderLists();
   renderTasks();
 }
+
+
 
 
 
@@ -917,6 +1020,11 @@ function setCompletedAndSchedule(list) {
     var prev = !!task.done;
     task.done = !task.done;
 
+    // Also sync in taskArray (if present)
+    ensureTaskArray(list);
+    var ta = list.taskArray.find(function(x){ return x.id === taskId; });
+    if (ta) { ta.done = !!task.done; }
+
     // Variáveis para controlar os pontos a serem adicionados
     var pointsToAdd = 0;
 
@@ -925,12 +1033,14 @@ function setCompletedAndSchedule(list) {
         if (!task._pointsAwarded) {
             pointsToAdd += POINTS_PER_TASK;
             task._pointsAwarded = true;  // Marcar a tarefa como pontuada
+            if (ta) ta._pointsAwarded = true;
         }
     } else if (prev && !task.done) {
         // Remove pontos da tarefa
         if (task._pointsAwarded) {
             pointsToAdd -= POINTS_PER_TASK;
             task._pointsAwarded = false;  // Desmarcar a tarefa como pontuada
+            if (ta) ta._pointsAwarded = false;
         }
     }
 
@@ -971,6 +1081,10 @@ function setCompletedAndSchedule(list) {
       animatePoints(-POINTS_PER_TASK);
     }
     list.tasks = (list.tasks || []).filter(function(t){ return t.id !== taskId; });
+    // remover também de taskArray (se existir)
+    if (Array.isArray(list.taskArray)) {
+      list.taskArray = list.taskArray.filter(function(a){ return a.id !== taskId; });
+    }
     if ((list.tasks || []).length === 0) { list.completed = false; list.bonusAwarded = false; list.completedAt = null; }
     save(); renderLists(); renderTasks();
   }
@@ -1151,146 +1265,83 @@ function setCompletedAndSchedule(list) {
   window.__mini_todo_state = state;
   window.__mini_todo_save = save;
   window.__mini_todo_computeLevel = computeLevelFromPoints;
+  // novas exposições úteis:
+  window.__mini_todo_getTasksArray = getTasksArray;
+  window.__mini_todo_buildAllTaskArrays = buildAllTaskArrays;
 });
 
 
 
+// ----------------------
+// RESET DIÁRIO (MEIA-NOITE)
+// ----------------------
+// Objetivo: esvaziar list.taskArray para todas as listas à meia-noite local.
+// Estratégia:
+// 1) Ao carregar: verificamos se o último reset registrado no localStorage é de outro dia — se sim, limpamos.
+// 2) Agendamos um setTimeout até a próxima meia-noite; quando disparar, limpamos e então disparamos um setInterval de 24h.
+// 3) Expondo uma função de debug: window.__mini_todo_forceClearTaskArrays()
 
-// ---------------------------------------------------
-// attemptHatchEgg: converte ovo_... => item '...' e atualiza preview
-// ---------------------------------------------------
-function attemptHatchEgg(){
-  try {
-    var egg = window.incubatorSelectedEgg;
-    if (!egg || String(egg.code || '').indexOf('ovo_') !== 0) return;
+(function setupDailyTaskArrayReset(){
+  var RESET_KEY = 'mini_todo_taskArray_lastReset_v1';
 
-    var LS = 'mini_todo_inventory_v1';
-    var inv = [];
-    try { inv = JSON.parse(localStorage.getItem(LS) || '[]') || []; } catch(e){ inv = []; }
-
-    // tentar remover o ovo correspondente: primeiro por UID, senão por código (remover só 1)
-    var removed = false;
-    for (var i = 0; i < inv.length; i++) {
-      var it = inv[i];
-      if (!it) continue;
-      if ((egg.uid && it.uid === egg.uid) || (it.code === egg.code && !removed)) {
-        inv.splice(i, 1);
-        removed = true;
-        break;
-      }
-    }
-    if (!removed) {
-      // nada para chocar (provavelmente já usado) — aborta silenciosamente
-      return;
-    }
-
-    // monta o novo item (retira 'ovo_' do código)
-    var base = egg.code.replace(/^ovo_/, '');
-    // tenta usar o emoji do ovo sem o '🥚' (se houver)
-    var rawEmoji = String(egg.emoji || '').replace(/🥚/g, '').trim();
-    var petEmoji = rawEmoji || '🐾';
-    var petName = String(base).replace(/_/g, ' ');
-    petName = petName.charAt(0).toUpperCase() + petName.slice(1);
-
-    var petItem = {
-      uid: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8),
-      code: base,
-      name: petName,
-      emoji: petEmoji,
-      desc: 'Nascido de um ovo',
-      awardedAt: new Date().toISOString(),
-      level: 0
-    };
-
-    // adiciona o pet no inventário
-    inv.push(petItem);
-    localStorage.setItem(LS, JSON.stringify(inv));
-
-    // notifica mudanças (para atualizar UI de inventário / slot)
+  function clearAllTaskArrays() {
     try {
-      document.dispatchEvent(new CustomEvent('mini_todo_inventory_changed', { detail: { code: egg.code, delta: -1 } }));
-      document.dispatchEvent(new CustomEvent('mini_todo_inventory_changed', { detail: { code: petItem.code, delta: +1 } }));
-    } catch(e){}
-
-    // atualiza preview na página (se existir) — tenta usar imagem em Assets e faz fallback para SVG
-    try {
-      var img = document.getElementById('incubator-page-preview') || document.getElementById('incubator-preview') || document.querySelector('.incubator-preview img');
-      if (img) {
-        // cria possíveis caminhos de arquivo a partir do código base (ex: 'gato_angora' -> 'Gato angora.png', 'Gato_angora.png', 'gato_angora.png', 'gatoangora.png')
-        var baseForFile = String(base || '').replace(/_/g, ' ').trim();
-        function titleCase(s){ return s.split(/\s+/).map(function(w){ return w.charAt(0).toUpperCase()+w.slice(1); }).join(' '); }
-        var candidates = [];
-        if (baseForFile) {
-          candidates.push('/assets/' + titleCase(baseForFile) + '.png');       // "Gato Angora.png" or "Bulldog.png"
-          candidates.push('/assets/' + baseForFile + '.png');                 // "gato angora.png"
-          candidates.push('/assets/' + baseForFile.replace(/\s+/g,'_') + '.png'); // "gato_angora.png"
-          candidates.push('/assets/' + baseForFile.replace(/\s+/g,'') + '.png');  // "gatoangora.png"
-        }
-        // always keep a final fallback to an inline SVG (emoji)
-        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">' +
-                  '<rect width="100%" height="100%" fill="#fff" rx="16" />' +
-                  '<text x="50%" y="50%" font-size="160" text-anchor="middle" dominant-baseline="middle">' + petEmoji + '</text>' +
-                  '<text x="50%" y="88%" font-size="28" text-anchor="middle" fill="#333">' + petName + '</text>' +
-                  '</svg>';
-        var svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-
-        // helper to try candidates sequentially; set onerror to fall back to SVG when all fail
-        var tried = 0;
-        function tryNext(){
-          if (tried >= candidates.length) {
-            img.onerror = null;
-            img.src = svgDataUrl;
-            return;
-          }
-          var candidate = candidates[tried++];
-          img.onerror = tryNext;
-          img.src = candidate;
-        }
-        // initial attempt: if no candidates, use SVG immediately
-        if (candidates.length === 0) {
-          img.src = svgDataUrl;
-        } else {
-          tryNext();
-        }
-
-        // also store the selected image path in the pet item (if possible) so inventory can reference it later
-        try {
-          petItem.image = candidates && candidates.length ? candidates[0] : null;
-        } catch(e){}
-      }
-    } catch(e){
-      // fallback silencioso para SVG se algo falhar
-      try {
-        var img = document.getElementById('incubator-page-preview') || document.getElementById('incubator-preview') || document.querySelector('.incubator-preview img');
-        if (img) {
-          var svg2 = '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"400\"><rect width=\"100%\" height=\"100%\" fill=\"#fff\" rx=\"16\" /><text x=\"50%\" y=\"50%\" font-size=\"160\" text-anchor=\"middle\" dominant-baseline=\"middle\">' + petEmoji + '</text><text x=\"50%\" y=\"88%\" font-size=\"28\" text-anchor=\"middle\" fill=\"#333\">' + petName + '</text></svg>';
-          img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg2);
-        }
-      } catch(ee){}
-    }
-
-    // pequena notificação visual (toast)
-    try {
-      var t = document.createElement('div');
-      t.className = 'rwd-toast';
-      t.textContent = 'Ovo chocou! Nasceu um ' + petName + ' ' + petEmoji;
-      Object.assign(t.style, {
-        position: 'fixed',
-        right: '20px',
-        bottom: '20px',
-        background: 'linear-gradient(90deg,#111827,#2563eb)',
-        color: '#fff',
-        padding: '10px 14px',
-        borderRadius: '10px',
-        boxShadow: '0 6px 20px rgba(2,6,23,0.12)',
-        zIndex: 11000,
-        fontWeight: '700'
+      state.pages.forEach(function(pg){
+        (pg.lists || []).forEach(function(l){
+          l.taskArray = [];
+        });
       });
-      document.body.appendChild(t);
-      setTimeout(function(){ t.style.opacity = '0'; t.style.transform = 'translateY(8px)'; }, 1600);
-      setTimeout(function(){ try { document.body.removeChild(t); } catch(e){} }, 2200);
-    } catch(e){}
-  } catch (e) {
-    console.error('attemptHatchEgg error', e);
+      save();
+      // re-render para atualizar a UI caso o usuário esteja com a página aberta
+      try { renderLists(); renderTasks(); updateGlobalProgress(); } catch(e) {}
+    } catch (e) { console.error('Erro ao limpar taskArray:', e); }
   }
-}
+
+  function todayKeyString() {
+    return startOfDay().toISOString().slice(0,10); // YYYY-MM-DD
+  }
+
+  function performDailyResetIfNeeded() {
+    try {
+      var last = localStorage.getItem(RESET_KEY);
+      var today = todayKeyString();
+      if (last !== today) {
+        // Executa o reset (limpa arrays) e grava a data
+        clearAllTaskArrays();
+        localStorage.setItem(RESET_KEY, today);
+        console.log('[mini_todo] taskArray reset realizado para o dia', today);
+      } else {
+        // já resetado hoje
+      }
+    } catch (e) { console.error('performDailyResetIfNeeded erro:', e); }
+  }
+
+  function scheduleMidnightReset() {
+    try {
+      var now = new Date();
+      var nextMidnight = startOfDay(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1));
+      var delay = nextMidnight.getTime() - now.getTime();
+      if (delay < 0) delay = 0;
+      // timeout até a próxima meia-noite
+      setTimeout(function() {
+        try {
+          clearAllTaskArrays();
+          localStorage.setItem(RESET_KEY, todayKeyString());
+          // após o primeiro acionamento, agendamos interval de 24h (aproximação suficiente)
+          setInterval(function(){
+            try {
+              clearAllTaskArrays();
+              localStorage.setItem(RESET_KEY, todayKeyString());
+            } catch(e) { console.error('interval clear error', e); }
+          }, 24 * 60 * 60 * 1000);
+        } catch (e) { console.error('Erro no timeout de meia-noite:', e); }
+      }, delay);
+    } catch (e) { console.error('scheduleMidnightReset erro:', e); }
+  }
+
+  // Expor função para debug/manual trigger
+  window.__mini_todo_forceClearTaskArrays = function(){ clearAllTaskArrays(); localStorage.setItem(RESET_KEY, todayKeyString()); };
+
+  // Executar verificação imediatamente na inicialização
+  try { performDailyResetIfNeeded(); scheduleMidnightReset(); } catch(e){ console.error('setupDailyTaskArrayReset erro:', e); }
+})();
