@@ -467,83 +467,190 @@
   }
 
   function ensureObservers(){
-    var tasksRoot = document.getElementById('tasks') || document.querySelector('.tasks');
-    if (tasksRoot){
-      // initial sync
-      updateTaskProgressFromDOM();
-      // Observe for structural changes (in case tasks are added/removed)
-      var mo = new MutationObserver(function(){ /* don't recalc every mutation; use separate events */ updateTaskProgressFromDOM(); });
-      try{ mo.observe(tasksRoot, { childList:true, subtree:true, attributes:true, attributeFilter:['class','data-uid','data-id'] }); }catch(e){}
-      window.dailyMissions = window.dailyMissions || {};
-      window.dailyMissions._tasksObserver = mo;
+  var tasksRoot = document.getElementById('tasks') || document.querySelector('.tasks');
+  var listsRoot  = document.getElementById('lists') || document.querySelector('.lists');
 
-      // Delegate listen for checkbox 'change' and clicks that select tasks
-      tasksRoot.addEventListener('change', function(ev){
+  // helper: detecta se um elemento (ou seus descendentes) está "concluído"
+  function elementIsCompleted(el){
+    if (!el) return false;
+    try{
+      // checkbox/radio inside
+      var cb = el.querySelector && el.querySelector('input[type="checkbox"], input[type="radio"]');
+      if (cb && (cb.checked || cb.getAttribute && cb.getAttribute('aria-checked')==='true')) return true;
+
+      // attribute flags
+      var attrCompleted = el.getAttribute && (el.getAttribute('data-completed') || el.getAttribute('data-done') || el.getAttribute('aria-checked'));
+      if (attrCompleted){
+        var v = String(attrCompleted).toLowerCase();
+        if (v === 'true' || v === '1' || /\b(yes|done|completed|concluida|concluido|finalizado)\b/.test(v)) return true;
+      }
+
+      // classes containing keywords
+      var cls = (el.className || '') + '';
+      if (/\b(completed|done|concluded|concluida|concluido|finalizada|finalizado)\b/i.test(cls)) return true;
+
+      // textual breadcrumbs (last resort): "Concluída", "Finalizado"
+      var text = (el.textContent||'').trim();
+      if (/\b(concluida|concluido|finalizado|finalizada|conclu)\b/i.test(text) && el.childElementCount <= 2) return true;
+
+      return false;
+    }catch(e){ return false; }
+  }
+
+  // helper: encontra o elemento "task" real a partir de qualquer nó interno
+  function findTaskElement(node){
+    if (!node) return null;
+    return node.closest && (
+      node.closest('.task') ||
+      node.closest('.task-item') ||
+      node.closest('[data-task-id]') ||
+      node.closest('[data-uid]') ||
+      node.closest('[data-id]') ||
+      node.closest('[role="listitem"]') ||
+      node.closest('li') ||
+      node
+    );
+  }
+
+  if (tasksRoot){
+    // initial sync
+    updateTaskProgressFromDOM();
+
+    // observer mais geral: observa subtree e atributos (não filtrados) para detectar mudanças de classe/atributo/movimentação
+    var mo = new MutationObserver(function(mutations){
+      mutations.forEach(function(m){
         try{
-          var tgt = ev.target;
-          if (!tgt) return;
-          if (tgt.tagName === 'INPUT' && (tgt.type === 'checkbox' || tgt.type === 'radio')){
-            if (tgt.checked){
-              var taskEl = tgt.closest && tgt.closest('.task');
-              if (!taskEl) taskEl = tgt.closest('[role="listitem"]') || tgt.closest('li') || tgt.parentElement;
-              handleTaskSelection(taskEl);
+          // attributes changed -> ver se virou "concluído"
+          if (m.type === 'attributes'){
+            var t = m.target;
+            var taskEl = findTaskElement(t);
+            if (taskEl && elementIsCompleted(taskEl)){
+              // só conta se ainda não tiver sido contado hoje
+              var id = getTaskIdentifier(taskEl);
+              if (id && !isTaskCountedToday(id)) handleTaskSelection(taskEl);
             }
           }
-        }catch(e){ console.error('daily-missions:tasksRoot change handler', e); }
-      });
 
-      // also listen for click on task elements (some apps mark selected on click)
-      tasksRoot.addEventListener('click', function(ev){
-        try{
-          var el = ev.target;
-          var taskEl = el.closest && el.closest('.task');
-          if (!taskEl) return;
-          // if there's an input checkbox inside, prefer using its checked state
-          var cb = taskEl.querySelector && taskEl.querySelector('input[type="checkbox"], input[type="radio"]');
-          if (cb){
-            // if cb is checked now, count it
-            if (cb.checked){
-              handleTaskSelection(taskEl);
-            }
-          } else {
-            // otherwise assume click means selection intent — count
+          // nodes added -> podem ser itens movidos para "concluídos"
+          if (m.addedNodes && m.addedNodes.length){
+            Array.prototype.forEach.call(m.addedNodes, function(node){
+              if (node.nodeType !== 1) return;
+              // se o próprio nó estiver marcado como concluído, ou conter filhos concluídos, contabiliza
+              if (elementIsCompleted(node)){
+                // tentar tarefas internas
+                var tasks = node.querySelectorAll && node.querySelectorAll('.task, .task-item, [role="listitem"], li, [data-task-id]');
+                if (tasks && tasks.length){
+                  Array.prototype.forEach.call(tasks, function(t){
+                    var tid = getTaskIdentifier(t);
+                    if (tid && !isTaskCountedToday(tid) && elementIsCompleted(t)) handleTaskSelection(t);
+                  });
+                } else {
+                  var taskEl = findTaskElement(node);
+                  if (taskEl){
+                    var tid = getTaskIdentifier(taskEl);
+                    if (tid && !isTaskCountedToday(tid) && elementIsCompleted(taskEl)) handleTaskSelection(taskEl);
+                  }
+                }
+              }
+            });
+          }
+
+          // nodes removed: ignore (they podem ser re-adicionados via addedNodes)
+        }catch(e){}
+      });
+    });
+
+    try{ mo.observe(tasksRoot, { childList:true, subtree:true, attributes:true, attributeOldValue:true }); }catch(e){}
+    window.dailyMissions = window.dailyMissions || {};
+    window.dailyMissions._tasksObserver = mo;
+
+    // change handler (checkboxes)
+    tasksRoot.addEventListener('change', function(ev){
+      try{
+        var tgt = ev.target;
+        if (!tgt) return;
+        if (tgt.tagName === 'INPUT' && (tgt.type === 'checkbox' || tgt.type === 'radio')){
+          if (tgt.checked || tgt.getAttribute && tgt.getAttribute('aria-checked')==='true'){
+            var taskEl = findTaskElement(tgt);
+            if (taskEl) handleTaskSelection(taskEl);
+          }
+        }
+      }catch(e){ console.error('daily-missions:tasksRoot change handler', e); }
+    });
+
+    // click handler (best-effort for apps that change selection on click)
+    tasksRoot.addEventListener('click', function(ev){
+      try{
+        var el = ev.target;
+        var taskEl = findTaskElement(el);
+        if (!taskEl) return;
+        // se houver checkbox, confere estado; senão assume clique como intenção de completar
+        var cb = taskEl.querySelector && taskEl.querySelector('input[type="checkbox"], input[type="radio"]');
+        if (cb){
+          if (cb.checked || cb.getAttribute && cb.getAttribute('aria-checked')==='true'){
             handleTaskSelection(taskEl);
           }
-        }catch(e){ /* fail silently */ }
-      }, true);
-    } else {
-      // fallback: listen global clicks to try to detect selection
-      document.body.addEventListener('click', function(ev){
-        try{
-          var el = ev.target;
-          var taskEl = el.closest && el.closest('.task');
-          if (!taskEl) return;
-          // count on click (best-effort)
-          handleTaskSelection(taskEl);
-        }catch(e){}
-      }, true);
-    }
+        } else {
+          // clique sem checkbox: conta se o elemento parecer concluído
+          if (elementIsCompleted(taskEl)) handleTaskSelection(taskEl);
+        }
+      }catch(e){ /* fail silently */ }
+    }, true);
 
-    // Observe lists region too
-    var listsRoot = document.getElementById('lists') || document.querySelector('.lists');
-    if (listsRoot){
-      var mo2 = new MutationObserver(function(){ updateTaskProgressFromDOM(); });
-      try{ mo2.observe(listsRoot, { childList:true, subtree:true, attributes:true, attributeFilter:['class','data-completed-at','data-completed'] }); }catch(e){}
-      window.dailyMissions = window.dailyMissions || {};
-      window.dailyMissions._listsObserver = mo2;
-    } else {
-      var moFallback = new MutationObserver(function(){ updateTaskProgressFromDOM(); });
-      try{ moFallback.observe(document.body, { childList:true, subtree:true }); }catch(e){}
-      window.dailyMissions = window.dailyMissions || {};
-      window.dailyMissions._listsObserver = moFallback;
-    }
+  } else {
+    // fallback global observer + click
+    var moFallback = new MutationObserver(function(){ updateTaskProgressFromDOM(); });
+    try{ moFallback.observe(document.body, { childList:true, subtree:true, attributes:true }); }catch(e){}
+    window.dailyMissions = window.dailyMissions || {};
+    window.dailyMissions._listsObserver = moFallback;
 
-    document.addEventListener('mini_todo_task_completed', onTaskCompletedEvent);
-    document.addEventListener('mini_todo_task_changed', onTaskCompletedEvent);
-    document.addEventListener('mini_todo_task_selected', function(ev){
-      try{ var t = ev && ev.detail && ev.detail.el; handleTaskSelection(t); }catch(e){} 
-    });
+    document.body.addEventListener('click', function(ev){
+      try{
+        var el = ev.target;
+        var taskEl = findTaskElement(el);
+        if (!taskEl) return;
+        handleTaskSelection(taskEl);
+      }catch(e){}
+    }, true);
   }
+
+  // Observe lists region too (detecta itens movidos entre listas)
+  if (listsRoot){
+    var mo2 = new MutationObserver(function(muts){
+      muts.forEach(function(m){
+        try{
+          if (m.addedNodes && m.addedNodes.length){
+            Array.prototype.forEach.call(m.addedNodes, function(node){
+              if (node.nodeType !== 1) return;
+              var taskEl = findTaskElement(node);
+              if (taskEl && elementIsCompleted(taskEl)){
+                var id = getTaskIdentifier(taskEl);
+                if (id && !isTaskCountedToday(id)) handleTaskSelection(taskEl);
+              }
+              // também checa descendentes
+              var tasks = node.querySelectorAll && node.querySelectorAll('.task, .task-item, [role="listitem"], li, [data-task-id]');
+              if (tasks && tasks.length){
+                Array.prototype.forEach.call(tasks, function(t){
+                  var tid = getTaskIdentifier(t);
+                  if (tid && !isTaskCountedToday(tid) && elementIsCompleted(t)) handleTaskSelection(t);
+                });
+              }
+            });
+          }
+        }catch(e){}
+      });
+    });
+    try{ mo2.observe(listsRoot, { childList:true, subtree:true, attributes:true, attributeOldValue:true }); }catch(e){}
+    window.dailyMissions = window.dailyMissions || {};
+    window.dailyMissions._listsObserver = mo2;
+  }
+
+  document.addEventListener('mini_todo_task_completed', onTaskCompletedEvent);
+  document.addEventListener('mini_todo_task_changed', onTaskCompletedEvent);
+  document.addEventListener('mini_todo_task_selected', function(ev){
+    try{ var t = ev && ev.detail && ev.detail.el; handleTaskSelection(t); }catch(e){} 
+  });
+}
 
   /* ---------- init ---------- */
   function init(){
