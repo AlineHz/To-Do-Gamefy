@@ -1345,3 +1345,141 @@ function setCompletedAndSchedule(list) {
   // Executar verificação imediatamente na inicialização
   try { performDailyResetIfNeeded(); scheduleMidnightReset(); } catch(e){ console.error('setupDailyTaskArrayReset erro:', e); }
 })();
+// ---------------------------------------------------
+// attemptHatchEgg: converte ovo_... => item '...' e atualiza preview
+// ---------------------------------------------------
+function attemptHatchEgg(){
+  try {
+    var egg = window.incubatorSelectedEgg;
+    if (!egg || String(egg.code || '').indexOf('ovo_') !== 0) return;
+
+    var LS = 'mini_todo_inventory_v1';
+    var inv = [];
+    try { inv = JSON.parse(localStorage.getItem(LS) || '[]') || []; } catch(e){ inv = []; }
+
+    // tentar remover o ovo correspondente: primeiro por UID, senão por código (remover só 1)
+    var removed = false;
+    for (var i = 0; i < inv.length; i++) {
+      var it = inv[i];
+      if (!it) continue;
+      if ((egg.uid && it.uid === egg.uid) || (it.code === egg.code && !removed)) {
+        inv.splice(i, 1);
+        removed = true;
+        break;
+      }
+    }
+    if (!removed) {
+      // nada para chocar (provavelmente já usado) — aborta silenciosamente
+      return;
+    }
+
+    // monta o novo item (retira 'ovo_' do código)
+    var base = egg.code.replace(/^ovo_/, '');
+    // tenta usar o emoji do ovo sem o '🥚' (se houver)
+    var rawEmoji = String(egg.emoji || '').replace(/🥚/g, '').trim();
+    var petEmoji = rawEmoji || '🐾';
+    var petName = String(base).replace(/_/g, ' ');
+    petName = petName.charAt(0).toUpperCase() + petName.slice(1);
+
+    var petItem = {
+      uid: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,8),
+      code: base,
+      name: petName,
+      emoji: petEmoji,
+      desc: 'Nascido de um ovo',
+      awardedAt: new Date().toISOString(),
+      level: 0
+    };
+
+    // adiciona o pet no inventário
+    inv.push(petItem);
+    localStorage.setItem(LS, JSON.stringify(inv));
+
+    // notifica mudanças (para atualizar UI de inventário / slot)
+    try {
+      document.dispatchEvent(new CustomEvent('mini_todo_inventory_changed', { detail: { code: egg.code, delta: -1 } }));
+      document.dispatchEvent(new CustomEvent('mini_todo_inventory_changed', { detail: { code: petItem.code, delta: +1 } }));
+    } catch(e){}
+
+    // atualiza preview na página (se existir) — tenta usar imagem em Assets e faz fallback para SVG
+    try {
+      var img = document.getElementById('incubator-page-preview') || document.getElementById('incubator-preview') || document.querySelector('.incubator-preview img');
+      if (img) {
+        // cria possíveis caminhos de arquivo a partir do código base (ex: 'gato_angora' -> 'Gato angora.png', 'Gato_angora.png', 'gato_angora.png', 'gatoangora.png')
+        var baseForFile = String(base || '').replace(/_/g, ' ').trim();
+        function titleCase(s){ return s.split(/\s+/).map(function(w){ return w.charAt(0).toUpperCase()+w.slice(1); }).join(' '); }
+        var candidates = [];
+        if (baseForFile) {
+          candidates.push('/assets/' + titleCase(baseForFile) + '.png');       // "Gato Angora.png" or "Bulldog.png"
+          candidates.push('/assets/' + baseForFile + '.png');                 // "gato angora.png"
+          candidates.push('/assets/' + baseForFile.replace(/\s+/g,'_') + '.png'); // "gato_angora.png"
+          candidates.push('/assets/' + baseForFile.replace(/\s+/g,'') + '.png');  // "gatoangora.png"
+        }
+        // always keep a final fallback to an inline SVG (emoji)
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="400">' +
+                  '<rect width="100%" height="100%" fill="#fff" rx="16" />' +
+                  '<text x="50%" y="50%" font-size="160" text-anchor="middle" dominant-baseline="middle">' + petEmoji + '</text>' +
+                  '<text x="50%" y="88%" font-size="28" text-anchor="middle" fill="#333">' + petName + '</text>' +
+                  '</svg>';
+        var svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+
+        // helper to try candidates sequentially; set onerror to fall back to SVG when all fail
+        var tried = 0;
+        function tryNext(){
+          if (tried >= candidates.length) {
+            img.onerror = null;
+            img.src = svgDataUrl;
+            return;
+          }
+          var candidate = candidates[tried++];
+          img.onerror = tryNext;
+          img.src = candidate;
+        }
+        // initial attempt: if no candidates, use SVG immediately
+        if (candidates.length === 0) {
+          img.src = svgDataUrl;
+        } else {
+          tryNext();
+        }
+
+        // also store the selected image path in the pet item (if possible) so inventory can reference it later
+        try {
+          petItem.image = candidates && candidates.length ? candidates[0] : null;
+        } catch(e){}
+      }
+    } catch(e){
+      // fallback silencioso para SVG se algo falhar
+      try {
+        var img = document.getElementById('incubator-page-preview') || document.getElementById('incubator-preview') || document.querySelector('.incubator-preview img');
+        if (img) {
+          var svg2 = '<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"800\" height=\"400\"><rect width=\"100%\" height=\"100%\" fill=\"#fff\" rx=\"16\" /><text x=\"50%\" y=\"50%\" font-size=\"160\" text-anchor=\"middle\" dominant-baseline=\"middle\">' + petEmoji + '</text><text x=\"50%\" y=\"88%\" font-size=\"28\" text-anchor=\"middle\" fill=\"#333\">' + petName + '</text></svg>';
+          img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg2);
+        }
+      } catch(ee){}
+    }
+
+    // pequena notificação visual (toast)
+    try {
+      var t = document.createElement('div');
+      t.className = 'rwd-toast';
+      t.textContent = 'Ovo chocou! Nasceu um ' + petName + ' ' + petEmoji;
+      Object.assign(t.style, {
+        position: 'fixed',
+        right: '20px',
+        bottom: '20px',
+        background: 'linear-gradient(90deg,#111827,#2563eb)',
+        color: '#fff',
+        padding: '10px 14px',
+        borderRadius: '10px',
+        boxShadow: '0 6px 20px rgba(2,6,23,0.12)',
+        zIndex: 11000,
+        fontWeight: '700'
+      });
+      document.body.appendChild(t);
+      setTimeout(function(){ t.style.opacity = '0'; t.style.transform = 'translateY(8px)'; }, 1600);
+      setTimeout(function(){ try { document.body.removeChild(t); } catch(e){} }, 2200);
+    } catch(e){}
+  } catch (e) {
+    console.error('attemptHatchEgg error', e);
+  }
+}
