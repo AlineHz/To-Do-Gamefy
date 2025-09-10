@@ -1548,3 +1548,226 @@ nav a.button:hover svg, .top-nav a.button:hover svg {
   stroke: #ffffff !important;
   fill: none !important;
 }
+/* sidebar scroll + sticky (desktop) */
+@media (min-width: 801px) {
+  .sidebar {
+    position: sticky;
+    top: 80px; /* ajusta conforme a altura do topo (top-nav) */
+    max-height: calc(100vh - 100px);
+    overflow: auto;
+  }
+}
+
+/* mobile: permitir colapso e limitar altura */
+@media (max-width: 800px) {
+  .sidebar {
+    width: 100%;
+    max-height: 240px;
+    overflow: auto;
+  }
+
+  /* adicionar classe body.sidebar-collapsed para esconder a sidebar */
+  body.sidebar-collapsed .sidebar {
+    display: none !important;
+  }
+
+  /* quando a sidebar estiver oculta, expande o content full width */
+  body.sidebar-collapsed .content,
+  body.sidebar-collapsed .right-column {
+    width: 100%;
+  }
+}
+/* === Ajuste: garantir que listas apareçam e rolem em telas pequenas === */
+@media (max-width: 800px) {
+  /* quando empilhado, permita que o container cresça naturalmente (em vez de forçar 100vh rígido) */
+  .container {
+    height: auto;
+    min-height: 100vh; /* mantém mínimo, mas deixa o fluxo ajustar */
+  }
+
+  /* conteúdo principal deve poder encolher/expandir */
+  .content {
+    flex: 1 1 auto;
+    min-height: 0; /* crucial para permitir overflow interno funcionar */
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* listas/tarefas: deixam rolar e ocupam o espaço restante */
+  .lists,
+  .tasks {
+    flex: 1 1 auto;
+    min-height: 0;           /* evita colapso em flex column */
+    max-height: calc(100vh - 220px); /* ajustável: altura disponível menos header/topnav */
+    overflow: auto;
+  }
+}
+
+
+
+/* ==========================
+   ADICIONADO: Fixes de responsividade (ChatGPT)
+   Objetivo: garantir que as listas apareçam e rolem corretamente em telas pequenas.
+   Colocado no final do arquivo para sobrescrever regras conflitantes anteriores.
+   ========================== */
+@media (max-width: 800px) {
+  /* container empilhado e permite altura automática (evita colapso dos filhos) */
+  .container {
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 100vh !important;
+    padding: 12px !important;
+    gap: 12px !important;
+  }
+
+  /* Sidebar ocupa 100% e pode rolar; limita a altura com base na viewport */
+  .sidebar {
+    width: 100% !important;
+    max-height: calc(100vh - 120px) !important; /* reserve espaço para top-nav e header */
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Content principal deve poder encolher/expandir e permitir overflow interno */
+  .content {
+    flex: 1 1 auto !important;
+    min-height: 0 !important; /* crucial para permitir que filhos rolem */
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: visible !important;
+  }
+
+  /* Right column também expande para largura total em mobile */
+  .right-column {
+    width: 100% !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+  }
+
+  /* As áreas que contem listas/tarefas devem rolar e ocupar o espaço restante */
+  .lists,
+  .tasks {
+    flex: 1 1 auto !important;
+    min-height: 0 !important; /* evita colapso dentro de flex column */
+    max-height: calc(100vh - 220px) !important; /* ajuste: viewport menos top-nav e inputs */
+    overflow: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Inputs e controles do topo devem encolher para caber em telas estreitas */
+  .top-row-controls > * {
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+
+  /* se o usuário esconder a sidebar via body.sidebar-collapsed, garanta que o content ocupe tudo */
+  body.sidebar-collapsed .content,
+  body.sidebar-collapsed .right-column {
+    width: 100% !important;
+  }
+}
+
+/* Ajustes adicionais para telas muito pequenas */
+@media (max-width: 420px) {
+  .lists,
+  .tasks {
+    max-height: calc(100vh - 260px) !important;
+  }
+
+  .sidebar {
+    max-height: calc(100vh - 120px) !important;
+  }
+
+  /* botões/inputs ocupam toda a largura disponível */
+  .top-row input,
+  .top-row button,
+  .task-input input,
+  .task-input button,
+  .top-nav input#new-page-title {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* on very small screens, make sure the pages list can scroll horizontally */
+  .top-nav .pages-list {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+/* Small helper: ensure any element that is a flex child and must scroll has min-height:0 */
+.container * {
+  min-height: 0 !important;
+}
+
+/* End of responsive fixes */
+/* ===== SNIPPET: em telas reduzidas — manter todos os "itens de nav" na 1ª linha
+   e colocar as abas/pages em uma 2ª linha abaixo.
+   Cole este bloco ao final do seu CSS. Ajuste o breakpoint (800px) se quiser. */
+
+@media (max-width: 800px) {
+  /* permite quebra controlada das linhas do top-nav */
+  .top-nav {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Certifica que o bloco esquerdo (level + pages-list) é um flex container */
+  .top-nav-left {
+    display: flex;
+    flex-direction: row;   /* por padrão o level fica ao lado (temporariamente) */
+    align-items: center;
+    gap: 12px;
+    order: 1;
+    flex: 0 1 auto;        /* não forçar a ocupar 100% (evita empurrar os controles) */
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  /* mantém badge/level fixo e sempre na 1ª linha */
+  .top-nav-left .level-container {
+    order: 1;
+    flex: 0 0 auto;
+    min-width: 64px;
+  } 
+
+  /* Faz com que as páginas (abas) saltem para a 2ª "linha" dentro do mesmo bloco.
+     Elas ocuparão 100% da largura disponível abaixo da 1ª linha. */
+  .top-nav-left .pages-list {
+    order: 2;               /* move para depois do level dentro do top-nav-left */
+    width: 100%;
+    flex: 0 0 100%;
+    margin-top: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    box-sizing: border-box;
+    display: flex;          /* garante que as abas permaneçam em linha e roláveis */
+    gap: 8px;
+  }
+
+  /* cada aba não deve quebrar nem esticar desnecessariamente */
+  .top-nav-left .pages-list .tab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* controles (add/edit/delete/input) ficam na MESMA 1ª LINHA,
+     à direita (usamos margin-left:auto para empurrar para a borda) */
+  .top-nav .pages-controls {
+    order: 1;
+    flex: 0 0 auto;
+    margin-left: auto;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* ajustes visuais compactos para a versão reduzida */
+  .top-nav { padding: 8px 12px; }
+  .top-nav-left .level-container { margin-right: 6px; }
+}
+
+/* ===== fim do snippet ===== */
