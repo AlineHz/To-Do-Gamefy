@@ -1776,14 +1776,29 @@ nav a.button:hover svg, .top-nav a.button:hover svg {
       padding-right: 0;
     }
 
-    /* badge e controls no topo */
-    .top-nav .level-container {
-      order: 0;
-      flex: 0 0 auto;
-      min-width: 64px;
-      margin-right: 8px;
-      align-self: center;
-    }
+   /* empilha conteúdo da badge: ícone/nivel em cima, xp-bar embaixo (sem mudar order) */
+.top-nav .level-container {
+  /* não altere order aqui — apenas empilha internamente */
+  display: flex;
+  flex-direction: column; /* empilha verticalmente */
+  align-items: flex-start; /* deixe flex-start para não esticar; use center para centralizar */
+  gap: 6px;
+  width: auto;    /* garante que a container mantenha largura natural */
+  min-width: 0;   /* evita overflow de filhos */
+  box-sizing: border-box;
+}
+
+/* ajuste da própria barra de XP — não força o .level-container a ficar gigante */
+.top-nav .level-container .xp-bar,
+.top-nav .level-container .badge-xp-bar,
+.top-nav .level-container .level-xp {
+  display: block;
+  width: 100%;        /* ocupa a largura da .level-container */
+  max-width: 340px;   /* evita que a barra estique demais; ajuste conforme desejar */
+  box-sizing: border-box;
+  margin: 0;
+}
+
     .top-nav .pages-controls {
       order: 3;
       margin-left: auto;
