@@ -1704,110 +1704,141 @@ nav a.button:hover svg, .top-nav a.button:hover svg {
 /* End of responsive fixes */
 /* ===== SNIPPET: em telas reduzidas — pages-list ocupa a largura do nav ===== */
 @media (max-width: 800px) {
-
-  
-  /* ===== ajustes para manter a badge na 1ª linha e as pages abaixo ===== */
-.top-nav {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center; /* centro vertical na 1ª linha */
-  gap: 8px;
-  padding: 8px 12px;
-  box-sizing: border-box;
-}
-
-/* não forçar .top-nav-left a ocupar 100% — deixa seu conteúdo fluir */
-.top-nav-left {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 12px;
-  order: 1;
-  flex: 0 1 auto;
-  min-width: 0;
-  width: auto; /* <-- importante: remover width:100% que causava quebra */
-  box-sizing: border-box;
-  flex-wrap: nowrap; /* evita que a badge quebre pra linha de cima sozinha */
-}
-
-/* badge/level sempre fixa à esquerda e sem crescer */
-.top-nav .level-container {
-  order: 1;
-  flex: 0 0 auto;    /* não cresce nem encolhe */
-  min-width: 0;
-  align-self: center;
-  margin-right: 8px;
-}
-
-/* controles ficam à direita na MESMA linha */
-.top-nav .pages-controls {
-  order: 2;
-  flex: 0 0 auto;
-  margin-left: auto;
-  align-self: center;
-  display: flex;
-  gap: 8px;
-}
-
-/* forçamos as tabs/pages a ocuparem a linha inteira de baixo */
-.top-nav .pages-list {
-  order: 3;
-  flex: 0 0 100%;    /* ocupa 100% da largura disponível em nova linha */
-  width: 100%;
-  max-width: 100%;
-  margin-top: 8px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  white-space: nowrap;
-  box-sizing: border-box;
-  min-width: 0;      /* evita overflow de filhos */
-}
-
-.top-nav .pages-list .tab {
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-
-/* ------------------------
-   Compatibilidade: display:contents
-   se você já usa, mantém as mesmas ordens/behavior
-   ------------------------ */
-@supports (display: contents) {
-  .top-nav-left { display: contents; }
-
-  .top-nav .level-container { order: 1; flex: 0 0 auto; min-width: 0; margin-right: 8px; }
-  .top-nav .pages-controls  { order: 2; margin-left: auto; }
-  .top-nav .pages-list      { order: 3; flex: 0 0 100%; width: 100%; margin-top: 8px; min-width: 0; }
-}
-
-/* Fallback (sem display:contents) — mesma ideia, sem width:100% em .top-nav-left */
-@supports not (display: contents) {
-  .top-nav-left { display: flex; width: auto; flex-wrap: nowrap; }
-
-  .top-nav .pages-controls {
-    position: absolute;
-    right: 12px;
-    top: 8px;
-    z-index: 5;
-    margin-left: 0;
-  }
-
-  .top-nav-left .pages-list {
-    order: 3;
-    flex: 0 0 100%;
-    width: calc(100% - 0px);
-    margin-top: 8px;
-    padding-left: 0;
-    padding-right: 0;
+  /* topo flexível */
+  .top-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;      /* padding interno do nav */
     box-sizing: border-box;
-    min-width: 0;
+    position: relative;     /* usado pelo fallback dos controles */
   }
 
-  .top-nav-left .level-container {
+  /* bloco esquerdo padrão (mantido p/ fallback) */
+  .top-nav-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
     order: 1;
-    margin-right: 8px;
-    align-self: center;
+    flex: 0 1 auto;
+    min-width: 0;
+    box-sizing: border-box;
+    width: 100%;            /* garante que o bloco ocupe a largura disponível no fallback */
+  }
+
+  /* páginas: default para ocupar 100% do container onde estiver */
+  .top-nav-left .pages-list,
+  .top-nav .pages-list {
+    order: 2;
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 100%;
+    margin-top: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    box-sizing: border-box;
+    display: flex;
+    gap: 8px;
+    padding-left: 0;        /* ajustável se quiser alinhamento interno */
+    padding-right: 0;
+  }
+
+  .top-nav-left .pages-list .tab {
     flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  /* controles permanecem na 1ª linha à direita — comportamento preferido */
+  .top-nav .pages-controls {
+    order: 3;
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-left: auto;
+  }
+
+  /* -------------------------
+     Modern approach: desmaterializa .top-nav-left para que .pages-list seja
+     diretamente filho de .top-nav e, assim, ocupe a largura interna do nav.
+     ------------------------- */
+  @supports (display: contents) {
+    .top-nav-left { display: contents; }
+
+    /* quando .pages-list for filho direto de .top-nav, width:100% = largura interna do nav */
+    .top-nav .pages-list {
+      order: 4;              /* coloca as abas abaixo */
+      width: 100%;
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+   /* empilha conteúdo da badge: ícone/nivel em cima, xp-bar embaixo (sem mudar order) */
+.top-nav .level-container {
+  /* não altere order aqui — apenas empilha internamente */
+  display: flex;
+  flex-direction: column; /* empilha verticalmente */
+  align-items: flex-start; /* deixe flex-start para não esticar; use center para centralizar */
+  gap: 6px;
+  width: auto;    /* garante que a container mantenha largura natural */
+  min-width: 0;   /* evita overflow de filhos */
+  box-sizing: border-box;
+}
+
+/* ajuste da própria barra de XP — não força o .level-container a ficar gigante */
+.top-nav .level-container .xp-bar,
+.top-nav .level-container .badge-xp-bar,
+.top-nav .level-container .level-xp {
+  display: block;
+  width: 100%;        /* ocupa a largura da .level-container */
+  max-width: 340px;   /* evita que a barra estique demais; ajuste conforme desejar */
+  box-sizing: border-box;
+  margin: 0;
+}
+
+    .top-nav .pages-controls {
+      order: 3;
+      margin-left: auto;
+    }
+  }
+
+  /* -------------------------
+     Fallback (sem display:contents):
+     - forçamos .top-nav-left a ocupar a largura do nav (width:100%)
+     - posicionamos os controles com position:absolute (mantendo-os visíveis na 1ª linha)
+     - .pages-list ocupa 100% da largura do nav (via estar dentro de .top-nav-left que já tem 100%)
+     ------------------------- */
+  @supports not (display: contents) {
+    .top-nav-left { display: flex; width: 100%; }
+
+    /* posiciona os controles à direita sem empurrar a .pages-list para outra linha */
+    .top-nav .pages-controls {
+      position: absolute;
+      right: 12px;           /* igual ao padding-right do nav */
+      top: 8px;              /* igual ao padding-top do nav */
+      z-index: 5;
+      margin-left: 0;
+    }
+
+    /* garante que a .pages-list fique alinhada com a área interna do nav */
+    .top-nav-left .pages-list {
+      order: 2;
+      width: calc(100% - 0px); /* já é 100% do bloco esquerdo, que está com width:100% */
+      margin-top: 8px;
+      padding-left: 0;
+      padding-right: 0;
+      box-sizing: border-box;
+    }
+
+    /* mantém a badge antes das abas no fluxo */
+    .top-nav-left .level-container {
+      order: 0;
+      margin-right: 8px;
+      align-self: center;
+    }
   }
 }
-}
+/* ===== fim do snippet ===== */
