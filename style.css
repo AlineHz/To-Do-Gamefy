@@ -1704,6 +1704,8 @@ nav a.button:hover svg, .top-nav a.button:hover svg {
 /* End of responsive fixes */
 /* ===== SNIPPET: em telas reduzidas — pages-list ocupa a largura do nav ===== */
 @media (max-width: 800px) {
+
+  
   /* topo flexível */
   .top-nav {
     display: flex;
@@ -1725,7 +1727,7 @@ nav a.button:hover svg, .top-nav a.button:hover svg {
     flex: 0 1 auto;
     min-width: 0;
     box-sizing: border-box;
-    width: 100%;            /* garante que o bloco ocupe a largura disponível no fallback */
+    width: 50%;            /* garante que o bloco ocupe a largura disponível no fallback */
   }
 
   /* páginas: default para ocupar 100% do container onde estiver */
@@ -1771,7 +1773,7 @@ nav a.button:hover svg, .top-nav a.button:hover svg {
     /* quando .pages-list for filho direto de .top-nav, width:100% = largura interna do nav */
     .top-nav .pages-list {
       order: 4;              /* coloca as abas abaixo */
-      width: 100%;
+      width: 50%;
       padding-left: 0;
       padding-right: 0;
     }
@@ -1793,7 +1795,7 @@ nav a.button:hover svg, .top-nav a.button:hover svg {
 .top-nav .level-container .badge-xp-bar,
 .top-nav .level-container .level-xp {
   display: block;
-  width: 100%;        /* ocupa a largura da .level-container */
+  width: 50%;        /* ocupa a largura da .level-container */
   max-width: 340px;   /* evita que a barra estique demais; ajuste conforme desejar */
   box-sizing: border-box;
   margin: 0;
@@ -1826,7 +1828,7 @@ nav a.button:hover svg, .top-nav a.button:hover svg {
     /* garante que a .pages-list fique alinhada com a área interna do nav */
     .top-nav-left .pages-list {
       order: 2;
-      width: calc(100% - 0px); /* já é 100% do bloco esquerdo, que está com width:100% */
+      width: calc(50% - 0px); /* já é 100% do bloco esquerdo, que está com width:100% */
       margin-top: 8px;
       padding-left: 0;
       padding-right: 0;
